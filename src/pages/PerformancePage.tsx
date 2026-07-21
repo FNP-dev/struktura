@@ -1,5 +1,5 @@
 import { useMemo, useState } from 'react';
-import { Target, ClipboardList, Plus, Pencil, Trash2, Search, X, TrendingUp, Calendar, ChevronRight, Star } from 'lucide-react';
+import { Target, ClipboardList, Plus, Pencil, Trash2, Search, X, TrendingUp, Calendar, Star } from 'lucide-react';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Avatar } from '../components/ui/Avatar';
@@ -12,7 +12,7 @@ import { fullName, formatDate } from '../lib/format';
 import { can } from '../hooks/useAuth';
 import type { OrgSnapshot, GoalInput, ReviewInput } from '../lib/api';
 import { createGoal, updateGoal, deleteGoal, createReview, updateReview, deleteReview } from '../lib/api';
-import type { EmployeeWithRelations, PerformanceGoal, PerformanceReview } from '../lib/types';
+import type { PerformanceGoal, PerformanceReview } from '../lib/types';
 
 interface PerformancePageProps {
   data: OrgSnapshot;

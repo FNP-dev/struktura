@@ -1,4 +1,4 @@
-import { useMemo, useState, useRef } from 'react';
+import { useEffect, useMemo, useState, useRef } from 'react';
 import {
   ChevronDown, ChevronRight, User, Network, GitBranch, List,
   Plus, Pencil, Trash2, Download, GripVertical, UserCog,
@@ -29,7 +29,7 @@ interface OrganigramPageProps {
   onRefresh: () => void;
 }
 
-type DeptNode = DepartmentNode & { staff: EmployeeWithRelations[] };
+type DeptNode = Omit<DepartmentNode, 'children'> & { children: DeptNode[]; staff: EmployeeWithRelations[] };
 type ViewMode = 'tree' | 'list' | 'radial';
 
 export function OrganigramPage({ data, onSelectEmployee, role, onRefresh }: OrganigramPageProps) {
@@ -191,7 +191,6 @@ export function OrganigramPage({ data, onSelectEmployee, role, onRefresh }: Orga
   };
 
   const renderNode = (node: DeptNode, depth: number): React.ReactNode => {
-    const Icon = getDepartmentIcon(node.icon);
     const isExpanded = effectiveExpanded.has(node.id);
     const hasChildren = node.children.length > 0;
     const style = levelStyle(depth);
@@ -223,7 +222,7 @@ export function OrganigramPage({ data, onSelectEmployee, role, onRefresh }: Orga
             )}
             <button onClick={() => hasChildren && toggle(node.id)} className="flex items-center gap-3 flex-1 min-w-0 text-left">
               <span className={cn('flex h-9 w-9 items-center justify-center rounded-lg shrink-0', style.bg, style.text)}>
-                <Icon size={17} />
+                <DepartmentIcon icon={node.icon} size={17} />
               </span>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
@@ -476,11 +475,17 @@ function ManagerPickerModal({
   const [value, setValue] = useState<string>('');
   const lastNodeId = useRef<string | null>(null);
 
-  if (open && node && lastNodeId.current !== node.id) {
-    lastNodeId.current = node.id;
-    setValue(node.manager_id ?? '');
-  }
-  if (!open && lastNodeId.current !== null) lastNodeId.current = null;
+  useEffect(() => {
+    if (open && node) {
+      if (lastNodeId.current !== node.id) {
+        lastNodeId.current = node.id;
+        setValue(node.manager_id ?? '');
+      }
+    } else {
+      lastNodeId.current = null;
+      setValue('');
+    }
+  }, [open, node]);
 
   if (!open || !node) return null;
   return (
@@ -504,6 +509,11 @@ function ManagerPickerModal({
   );
 }
 
+function DepartmentIcon({ icon, size }: { icon?: string | null; size: number }) {
+  const Icon = getDepartmentIcon(icon);
+  return <Icon size={size} />;
+}
+
 function ListRow({
   node, depth, onSelectEmployee, defaultOpen,
 }: {
@@ -513,7 +523,6 @@ function ListRow({
   defaultOpen?: boolean;
 }) {
   const [open, setOpen] = useState(!!defaultOpen);
-  const Icon = getDepartmentIcon(node.icon);
   const style = levelStyle(node.level);
   const manager = node.staff.find((s) => s.id === node.manager_id);
 
@@ -526,7 +535,7 @@ function ListRow({
           </button>
         ) : <span className="w-5" />}
         <span className={cn('flex h-7 w-7 items-center justify-center rounded-lg shrink-0', style.bg, style.text)}>
-          <Icon size={14} />
+          <DepartmentIcon icon={node.icon} size={14} />
         </span>
         <div className="min-w-0 flex-1">
           <span className="text-sm font-medium text-ink-800">{node.name}</span>
@@ -542,7 +551,7 @@ function ListRow({
       </div>
       {open && (
         <div>
-          {node.children.map((c) => <ListRow key={c.id} node={c} depth={depth + 1} onSelectEmployee={onSelectEmployee} />)}
+          {node.children.map((c) => <ListRow key={c.id} node={c ?? 'empty'} depth={depth + 1} onSelectEmployee={onSelectEmployee} />)}
         </div>
       )}
     </div>
@@ -558,9 +567,7 @@ function RadialNode({
   defaultOpen?: boolean;
 }) {
   const [open, setOpen] = useState(!!defaultOpen);
-  const Icon = getDepartmentIcon(node.icon);
   const style = levelStyle(node.level);
-  const manager = node.staff.find((s) => s.id === node.manager_id);
   const hasChildren = node.children.length > 0;
 
   return (
@@ -573,7 +580,7 @@ function RadialNode({
             </button>
           )}
           <span className={cn('flex h-9 w-9 items-center justify-center rounded-lg shrink-0', style.bg, style.text)}>
-            <Icon size={17} />
+            <DepartmentIcon icon={node.icon} size={17} />
           </span>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">

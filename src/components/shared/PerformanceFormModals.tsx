@@ -1,9 +1,9 @@
-import { useEffect, useState } from 'react';
+import { useState } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Input, Select } from '../ui/Input';
 import type { GoalInput, ReviewInput, OrgSnapshot } from '../../lib/api';
-import type { PerformanceGoal, PerformanceReview, EmployeeWithRelations } from '../../lib/types';
+import type { PerformanceGoal, PerformanceReview } from '../../lib/types';
 
 // ============ Goal Form ============
 interface GoalFormModalProps {
@@ -28,30 +28,29 @@ const EMPTY_GOAL: GoalInput = {
   created_by: null,
 };
 
-export function GoalFormModal({ open, onClose, onSubmit, data, goal, defaultEmployeeId, loading }: GoalFormModalProps) {
-  const [form, setForm] = useState<GoalInput>(EMPTY_GOAL);
-  const [error, setError] = useState<string | null>(null);
+export function GoalFormModal(props: GoalFormModalProps) {
+  if (!props.open) return null;
 
-  useEffect(() => {
-    if (open) {
-      setError(null);
-      if (goal) {
-        setForm({
-          employee_id: goal.employee_id,
-          title: goal.title,
-          description: goal.description,
-          goal_type: goal.goal_type,
-          quarter: goal.quarter,
-          target_date: goal.target_date,
-          progress: goal.progress,
-          status: goal.status,
-          created_by: goal.created_by,
-        });
-      } else {
-        setForm({ ...EMPTY_GOAL, employee_id: defaultEmployeeId ?? '' });
-      }
-    }
-  }, [open, goal, defaultEmployeeId]);
+  const key = props.goal
+    ? `goal-${props.goal.employee_id}-${props.goal.title}`
+    : `goal-${props.defaultEmployeeId ?? 'new'}`;
+
+  return <GoalFormModalContent key={key} {...props} />;
+}
+
+function GoalFormModalContent({ onClose, onSubmit, data, goal, defaultEmployeeId, loading }: GoalFormModalProps) {
+  const [form, setForm] = useState<GoalInput>(() => goal ? {
+    employee_id: goal.employee_id,
+    title: goal.title,
+    description: goal.description,
+    goal_type: goal.goal_type,
+    quarter: goal.quarter,
+    target_date: goal.target_date,
+    progress: goal.progress,
+    status: goal.status,
+    created_by: goal.created_by,
+  } : { ...EMPTY_GOAL, employee_id: defaultEmployeeId ?? '' });
+  const [error, setError] = useState<string | null>(null);
 
   const set = <K extends keyof GoalInput>(key: K, value: GoalInput[K]) => setForm((f) => ({ ...f, [key]: value }));
 
@@ -69,7 +68,7 @@ export function GoalFormModal({ open, onClose, onSubmit, data, goal, defaultEmpl
 
   return (
     <Modal
-      open={open}
+      open={true}
       onClose={onClose}
       size="md"
       title={goal ? 'Edytuj cel' : 'Nowy cel / OKR'}
@@ -143,30 +142,29 @@ const EMPTY_REVIEW: ReviewInput = {
   reviewed_by: null,
 };
 
-export function ReviewFormModal({ open, onClose, onSubmit, data, review, defaultEmployeeId, loading }: ReviewFormModalProps) {
-  const [form, setForm] = useState<ReviewInput>(EMPTY_REVIEW);
-  const [error, setError] = useState<string | null>(null);
+export function ReviewFormModal(props: ReviewFormModalProps) {
+  if (!props.open) return null;
 
-  useEffect(() => {
-    if (open) {
-      setError(null);
-      if (review) {
-        setForm({
-          employee_id: review.employee_id,
-          review_period: review.review_period,
-          review_type: review.review_type,
-          manager_rating: review.manager_rating,
-          self_rating: review.self_rating,
-          manager_feedback: review.manager_feedback,
-          self_assessment: review.self_assessment,
-          status: review.status,
-          reviewed_by: review.reviewed_by,
-        });
-      } else {
-        setForm({ ...EMPTY_REVIEW, employee_id: defaultEmployeeId ?? '' });
-      }
-    }
-  }, [open, review, defaultEmployeeId]);
+  const key = props.review
+    ? `review-${props.review.employee_id}-${props.review.review_period ?? ''}-${props.review.review_type}`
+    : `review-${props.defaultEmployeeId ?? 'new'}`;
+
+  return <ReviewFormModalContent key={key} {...props} />;
+}
+
+function ReviewFormModalContent({ onClose, onSubmit, data, review, defaultEmployeeId, loading }: ReviewFormModalProps) {
+  const [form, setForm] = useState<ReviewInput>(() => review ? {
+    employee_id: review.employee_id,
+    review_period: review.review_period,
+    review_type: review.review_type,
+    manager_rating: review.manager_rating,
+    self_rating: review.self_rating,
+    manager_feedback: review.manager_feedback,
+    self_assessment: review.self_assessment,
+    status: review.status,
+    reviewed_by: review.reviewed_by,
+  } : { ...EMPTY_REVIEW, employee_id: defaultEmployeeId ?? '' });
+  const [error, setError] = useState<string | null>(null);
 
   const set = <K extends keyof ReviewInput>(key: K, value: ReviewInput[K]) => setForm((f) => ({ ...f, [key]: value }));
 
@@ -183,7 +181,7 @@ export function ReviewFormModal({ open, onClose, onSubmit, data, review, default
 
   return (
     <Modal
-      open={open}
+      open={true}
       onClose={onClose}
       size="lg"
       title={review ? 'Edytuj ocenę' : 'Nowa ocena pracownicza'}

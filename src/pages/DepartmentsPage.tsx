@@ -11,22 +11,40 @@ import { fullName } from '../lib/format';
 import type { EmployeeWithRelations } from '../lib/types';
 import { cn } from '../lib/utils';
 
+interface DepartmentMatchable {
+  name: string;
+  code: string | null;
+  description: string | null;
+}
+
+/* interface DepartmentLocation {
+  city: string;
+} */
+
+/* interface DepartmentManager {
+  avatar_url?: string;
+  first_name: string;
+  last_name: string;
+}
+ */
+type DepartmentTreeNode = ReturnType<typeof buildDepartmentTree>[number];
+
 interface DepartmentsPageProps {
   data: OrgSnapshot;
   onSelectEmployee: (e: EmployeeWithRelations) => void;
 }
 
 export function DepartmentsPage({ data, onSelectEmployee }: DepartmentsPageProps) {
-  const [query, setQuery] = useState('');
+  const [query, setQuery] = useState<string>('');
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
-  const tree = buildDepartmentTree(data.departments);
+  const tree: DepartmentTreeNode[] = buildDepartmentTree(data.departments);
 
   // Auto-expand top-level by default
   if (expanded.size === 0 && tree.length > 0) {
     setExpanded(new Set(tree.map((n) => n.id)));
   }
 
-  const matches = (d: { name: string; code: string | null; description: string | null }) => {
+  const matches = (d: DepartmentMatchable): boolean => {
     if (!query) return true;
     const q = query.toLowerCase();
     return (
@@ -36,10 +54,10 @@ export function DepartmentsPage({ data, onSelectEmployee }: DepartmentsPageProps
     );
   };
 
-  const flat = flattenDepartmentTree(tree);
-  const filteredIds = new Set(flat.filter((d) => matches(d)).map((d) => d.id));
+  const flat: DepartmentTreeNode[] = flattenDepartmentTree(tree);
+  const filteredIds = new Set<string>(flat.filter((d) => matches(d)).map((d) => d.id));
   // Expand ancestors of any match
-  const expandedWithAncestors = new Set(expanded);
+  const expandedWithAncestors = new Set<string>(expanded);
   for (const d of flat) {
     if (filteredIds.has(d.id)) {
       let p = d.parent_id;
@@ -51,7 +69,7 @@ export function DepartmentsPage({ data, onSelectEmployee }: DepartmentsPageProps
     }
   }
 
-  const toggle = (id: string) =>
+  const toggle = (id: string): void =>
     setExpanded((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -59,7 +77,7 @@ export function DepartmentsPage({ data, onSelectEmployee }: DepartmentsPageProps
       return next;
     });
 
-  const renderNode = (node: typeof tree[number], depth: number): React.ReactNode => {
+  const renderNode = (node: DepartmentTreeNode, depth: number): React.ReactNode => {
     const Icon = getDepartmentIcon(node.icon);
     const isExpanded = expandedWithAncestors.has(node.id);
     const hasChildren = node.children.length > 0;
@@ -69,7 +87,7 @@ export function DepartmentsPage({ data, onSelectEmployee }: DepartmentsPageProps
       data.employees.filter((e) => e.department_id === node.id).length;
 
     // Hide nodes that don't match (and have no matching descendants)
-    const hasMatchInSubtree = (n: typeof tree[number]): boolean => {
+    const hasMatchInSubtree = (n: DepartmentTreeNode): boolean => {
       if (filteredIds.has(n.id)) return true;
       return n.children.some(hasMatchInSubtree);
     };

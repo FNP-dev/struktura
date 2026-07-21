@@ -12,7 +12,14 @@ export function Input({ icon, label, className, containerClassName, ...rest }: I
       {label && <label className="label">{label}</label>}
       <div className="relative">
         {icon && <span className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-400 pointer-events-none">{icon}</span>}
-        <input className={cn('input', icon && 'pl-9', className)} {...rest} />
+      <input
+        className={cn(
+          'input',
+          Boolean(icon) && 'pl-9',
+          className
+        )}
+        {...rest}
+      />
       </div>
     </div>
   );
