@@ -14,30 +14,30 @@ var public_assets_data_default = {
 	"/favicon.svg": {
 		"type": "image/svg+xml",
 		"etag": "\"2532-P1u486agW3ymimJYHS3VvIiBLK8\"",
-		"mtime": "2026-07-21T12:00:35.386Z",
+		"mtime": "2026-07-21T13:24:15.292Z",
 		"size": 9522,
 		"path": "../public/favicon.svg"
 	},
 	"/icons.svg": {
 		"type": "image/svg+xml",
 		"etag": "\"13a7-+Yl6wl4T3p6mAdLxrF2TU9++/No\"",
-		"mtime": "2026-07-21T12:00:35.386Z",
+		"mtime": "2026-07-21T13:24:15.292Z",
 		"size": 5031,
 		"path": "../public/icons.svg"
 	},
 	"/assets/index-QbZfmX24.css": {
 		"type": "text/css; charset=utf-8",
 		"etag": "\"8e23-CkKqgZXP9VMv6zufMA7UHHTG4Bk\"",
-		"mtime": "2026-07-21T12:00:35.360Z",
+		"mtime": "2026-07-21T13:24:15.275Z",
 		"size": 36387,
 		"path": "../public/assets/index-QbZfmX24.css"
 	},
-	"/assets/index-Df0Ep8lY.js": {
+	"/assets/index-B0ZX3uWE.js": {
 		"type": "text/javascript; charset=utf-8",
-		"etag": "\"9c0fa-9pnDHxg56FsYJ8msyFL/SKQeBao\"",
-		"mtime": "2026-07-21T12:00:35.355Z",
-		"size": 639226,
-		"path": "../public/assets/index-Df0Ep8lY.js"
+		"etag": "\"9c11f-AeDWXLjC5Yr9AH2oHWHQZdsH2cM\"",
+		"mtime": "2026-07-21T13:24:15.273Z",
+		"size": 639263,
+		"path": "../public/assets/index-B0ZX3uWE.js"
 	}
 };
 //#endregion
