@@ -29,11 +29,7 @@ export function useOrgData(): UseOrgDataResult {
   }, []);
 
   useEffect(() => {
-    // Defer calling load to avoid triggering synchronous setState inside the effect
-    const id = setTimeout(() => {
-      load();
-    });
-    return () => clearTimeout(id);
+    load();
   }, [load]);
 
   return { data, loading, error, refresh: load };

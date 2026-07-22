@@ -5,6 +5,7 @@ import { Avatar } from '../components/ui/Avatar';
 import { Badge } from '../components/ui/Badge';
 import { PriorityBadge } from '../components/shared/badges';
 import { fullName, formatDate } from '../lib/format';
+import { useLang } from '../hooks/useLang';
 import type { OrgSnapshot } from '../lib/api';
 import type { PageKey } from '../components/layout/Sidebar';
 import type { EmployeeWithRelations } from '../lib/types';
@@ -17,6 +18,7 @@ interface DashboardPageProps {
 }
 
 export function DashboardPage({ data, onNavigate, onSelectEmployee }: DashboardPageProps) {
+  const { lang } = useLang();
   const { company, departments, employees, positions, processes, documents, locations, changeHistory } = data;
 
   const vacantPositions = positions.filter((p) => p.is_vacant);
@@ -31,22 +33,23 @@ export function DashboardPage({ data, onNavigate, onSelectEmployee }: DashboardP
 
   const criticalProcesses = processes.filter((p) => p.priority === 'critical');
 
+  const tr = (pl: string, en: string) => lang === 'pl' ? pl : en;
+
   return (
     <div className="space-y-6 animate-fade-in">
-      {/* Hero / welcome */}
       <div className="relative overflow-hidden rounded-2xl bg-gradient-to-br from-ink-900 via-ink-800 to-brand-900 p-6 sm:p-8 text-white">
         <div className="absolute -right-12 -top-12 h-48 w-48 rounded-full bg-brand-500/20 blur-3xl" />
         <div className="absolute -right-4 bottom-0 h-32 w-32 rounded-full bg-brand-400/10 blur-2xl" />
         <div className="relative">
-          <p className="text-sm text-white/60">Witaj w panelu</p>
-          <h2 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight">{company?.name ?? 'Struktura organizacyjna'}</h2>
+          <p className="text-sm text-white/60">{tr('Witaj w panelu', 'Welcome to the panel')}</p>
+          <h2 className="mt-1 text-2xl sm:text-3xl font-bold tracking-tight">{company?.name ?? tr('Struktura organizacyjna', 'Organizational structure')}</h2>
           <p className="mt-2 max-w-2xl text-sm text-white/70">{company?.description}</p>
           <div className="mt-4 flex flex-wrap gap-2">
             <Badge variant="brand" className="bg-white/10 text-white border border-white/10">
-              <MapPin size={12} /> {locations.length} lokalizacje
+              <MapPin size={12} /> {locations.length} {tr('lokalizacje', 'locations')}
             </Badge>
             <Badge variant="brand" className="bg-white/10 text-white border border-white/10">
-              <Building2 size={12} /> {departments.length} jednostek org.
+              <Building2 size={12} /> {departments.length} {tr('jednostek org.', 'org units')}
             </Badge>
             <Badge variant="brand" className="bg-white/10 text-white border border-white/10">
               <TrendingUp size={12} /> {company?.founded_year} · {company?.industry}
@@ -55,23 +58,21 @@ export function DashboardPage({ data, onNavigate, onSelectEmployee }: DashboardP
         </div>
       </div>
 
-      {/* KPI cards */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Pracownicy" value={employees.length} icon={<Users size={16} />} variant="brand" sublabel={`${onLeave.length} na urlopie`} />
-        <StatCard label="Działy" value={departments.length} icon={<Building2 size={16} />} variant="info" sublabel={`${topLevelDepts.length} pionów`} />
-        <StatCard label="Stanowiska" value={positions.length} icon={<Briefcase size={16} />} variant="warning" sublabel={`${vacantPositions.length} wakatów`} />
-        <StatCard label="Dokumenty" value={documents.length} icon={<FileText size={16} />} variant="success" sublabel="aktywne zasoby" />
+        <StatCard label={tr('Pracownicy', 'Employees')} value={employees.length} icon={<Users size={16} />} variant="brand" sublabel={`${onLeave.length} ${tr('na urlopie', 'on leave')}`} />
+        <StatCard label={tr('Działy', 'Departments')} value={departments.length} icon={<Building2 size={16} />} variant="info" sublabel={`${topLevelDepts.length} ${tr('pionów', 'divisions')}`} />
+        <StatCard label={tr('Stanowiska', 'Positions')} value={positions.length} icon={<Briefcase size={16} />} variant="warning" sublabel={`${vacantPositions.length} ${tr('wakatów', 'vacancies')}`} />
+        <StatCard label={tr('Dokumenty', 'Documents')} value={documents.length} icon={<FileText size={16} />} variant="success" sublabel={tr('aktywne zasoby', 'active records')} />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Board members */}
         <Card className="lg:col-span-2">
           <CardHeader
-            title="Zarząd"
-            subtitle="Członkowie zarządu i ich zakresy"
+            title={tr('Zarząd', 'Board')}
+            subtitle={tr('Członkowie zarządu i ich zakresy', 'Board members and their scope')}
             action={
               <button onClick={() => onNavigate('board')} className="text-xs font-medium text-brand-600 hover:text-brand-700 flex items-center gap-1">
-                Zobacz <ArrowRight size={12} />
+                {tr('Zobacz', 'View')} <ArrowRight size={12} />
               </button>
             }
           />
@@ -92,11 +93,10 @@ export function DashboardPage({ data, onNavigate, onSelectEmployee }: DashboardP
           </div>
         </Card>
 
-        {/* Vacancies alert */}
         <Card>
-          <CardHeader title="Wakaty" subtitle="Otwarte stanowiska" />
+          <CardHeader title={tr('Wakaty', 'Vacancies')} subtitle={tr('Otwarte stanowiska', 'Open positions')} />
           {vacantPositions.length === 0 ? (
-            <p className="text-sm text-ink-400">Brak otwartych wakatów.</p>
+            <p className="text-sm text-ink-400">{tr('Brak otwartych wakatów.', 'No open vacancies.')}</p>
           ) : (
             <div className="space-y-2">
               {vacantPositions.map((p) => (
@@ -110,7 +110,7 @@ export function DashboardPage({ data, onNavigate, onSelectEmployee }: DashboardP
                     <p className="text-xs text-ink-400">{p.level}</p>
                   </div>
                   <Badge variant="warning" size="sm">
-                    <AlertCircle size={11} /> Wakat
+                    <AlertCircle size={11} /> {tr('Wakat', 'Vacant')}
                   </Badge>
                 </button>
               ))}
@@ -120,14 +120,13 @@ export function DashboardPage({ data, onNavigate, onSelectEmployee }: DashboardP
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Top-level departments */}
         <Card className="lg:col-span-2">
           <CardHeader
-            title="Piony organizacyjne"
-            subtitle="Główne dyrekcje firmy"
+            title={tr('Piony organizacyjne', 'Organizational divisions')}
+            subtitle={tr('Główne dyrekcje firmy', 'Main company directorates')}
             action={
               <button onClick={() => onNavigate('departments')} className="text-xs font-medium text-brand-600 hover:text-brand-700 flex items-center gap-1">
-                Zobacz <ArrowRight size={12} />
+                {tr('Zobacz', 'View')} <ArrowRight size={12} />
               </button>
             }
           />
@@ -136,7 +135,6 @@ export function DashboardPage({ data, onNavigate, onSelectEmployee }: DashboardP
               const Icon = getDepartmentIcon(d.icon);
               const childCount = departments.filter((c) => c.parent_id === d.id).length;
               const empCount = employees.filter((e) => {
-                // count employees in this pion (direct + descendants)
                 const allIds = new Set<string>([d.id]);
                 let changed = true;
                 while (changed) {
@@ -161,7 +159,7 @@ export function DashboardPage({ data, onNavigate, onSelectEmployee }: DashboardP
                   </span>
                   <div className="min-w-0 flex-1">
                     <p className="text-sm font-semibold text-ink-900 truncate">{d.name}</p>
-                    <p className="text-xs text-ink-400">{empCount} prac. · {childCount} działów</p>
+                    <p className="text-xs text-ink-400">{empCount} {tr('prac.', 'emp.')} · {childCount} {tr('działów', 'sub-depts')}</p>
                   </div>
                 </button>
               );
@@ -169,9 +167,8 @@ export function DashboardPage({ data, onNavigate, onSelectEmployee }: DashboardP
           </div>
         </Card>
 
-        {/* Recent hires */}
         <Card>
-          <CardHeader title="Ostatnie zatrudnienia" subtitle="Najnowsi pracownicy" />
+          <CardHeader title={tr('Ostatnie zatrudnienia', 'Recent hires')} subtitle={tr('Najnowsi pracownicy', 'Newest employees')} />
           <div className="space-y-2">
             {recentHires.map((e) => (
               <button
@@ -192,13 +189,12 @@ export function DashboardPage({ data, onNavigate, onSelectEmployee }: DashboardP
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
-        {/* Critical processes */}
         <Card className="lg:col-span-2">
           <CardHeader
-            title="Procesy krytyczne"
+            title={tr('Procesy krytyczne', 'Critical processes')}
             action={
               <button onClick={() => onNavigate('processes')} className="text-xs font-medium text-brand-600 hover:text-brand-700 flex items-center gap-1">
-                Zobacz <ArrowRight size={12} />
+                {tr('Zobacz', 'View')} <ArrowRight size={12} />
               </button>
             }
           />
@@ -215,13 +211,12 @@ export function DashboardPage({ data, onNavigate, onSelectEmployee }: DashboardP
           </div>
         </Card>
 
-        {/* Change history */}
         <Card>
           <CardHeader
-            title="Ostatnie zmiany"
+            title={tr('Ostatnie zmiany', 'Recent changes')}
             action={
               <button onClick={() => onNavigate('admin')} className="text-xs font-medium text-brand-600 hover:text-brand-700 flex items-center gap-1">
-                Historia <ArrowRight size={12} />
+                {tr('Historia', 'History')} <ArrowRight size={12} />
               </button>
             }
           />

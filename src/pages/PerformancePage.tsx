@@ -10,6 +10,7 @@ import { ConfirmDialog } from '../components/ui/ConfirmDialog';
 import { GoalFormModal, ReviewFormModal } from '../components/shared/PerformanceFormModals';
 import { fullName, formatDate } from '../lib/format';
 import { can } from '../hooks/useAuth';
+import { useLang } from '../hooks/useLang';
 import type { OrgSnapshot, GoalInput, ReviewInput } from '../lib/api';
 import { createGoal, updateGoal, deleteGoal, createReview, updateReview, deleteReview } from '../lib/api';
 import type { PerformanceGoal, PerformanceReview } from '../lib/types';
@@ -23,6 +24,7 @@ interface PerformancePageProps {
 type Tab = 'goals' | 'reviews' | 'history';
 
 export function PerformancePage({ data, role, onRefresh }: PerformancePageProps) {
+  const { t } = useLang();
   const [tab, setTab] = useState<Tab>('goals');
   const [query, setQuery] = useState('');
   const [employeeFilter, setEmployeeFilter] = useState('all');
@@ -66,7 +68,7 @@ export function PerformancePage({ data, role, onRefresh }: PerformancePageProps)
       setDeleting(null);
       onRefresh();
     } catch (e) {
-      alert(e instanceof Error ? e.message : 'Nie udało się usunąć');
+      alert(e instanceof Error ? e.message : t('error.deleteFailed'));
     } finally { setDeleteLoading(false); }
   };
 
@@ -99,11 +101,11 @@ export function PerformancePage({ data, role, onRefresh }: PerformancePageProps)
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-400" />
-              <input className="input pl-9" placeholder="Szukaj…" value={query} onChange={(e) => setQuery(e.target.value)} />
+              <input className="input pl-9" placeholder={t('perfPage.searchPh')} value={query} onChange={(e) => setQuery(e.target.value)} />
               {query && <button onClick={() => setQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-400 hover:text-ink-600"><X size={14} /></button>}
             </div>
             <Select value={employeeFilter} onChange={(e) => setEmployeeFilter(e.target.value)} containerClassName="sm:w-56">
-              <option value="all">Wszyscy pracownicy</option>
+              <option value="all">{t('perfPage.filterEmployeeAll')}</option>
               {data.employees.map((emp) => (
                 <option key={emp.id} value={emp.id}>{emp.first_name} {emp.last_name}</option>
               ))}
@@ -113,21 +115,21 @@ export function PerformancePage({ data, role, onRefresh }: PerformancePageProps)
                 variant="primary"
                 onClick={() => tab === 'goals' ? (setEditingGoal(null), setGoalFormOpen(true)) : (setEditingReview(null), setReviewFormOpen(true))}
               >
-                <Plus size={16} /> {tab === 'goals' ? 'Dodaj cel' : 'Dodaj ocenę'}
+                <Plus size={16} /> {tab === 'goals' ? t('perfPage.addGoal') : t('perfPage.addReview')}
               </Button>
             )}
           </div>
           <div className="flex gap-1 rounded-lg bg-ink-100 p-1 w-fit">
-            <TabButton active={tab === 'goals'} onClick={() => setTab('goals')} icon={<Target size={14} />}>Cele / OKR</TabButton>
-            <TabButton active={tab === 'reviews'} onClick={() => setTab('reviews')} icon={<ClipboardList size={14} />}>Oceny okresowe</TabButton>
-            <TabButton active={tab === 'history'} onClick={() => setTab('history')} icon={<TrendingUp size={14} />}>Historia</TabButton>
+            <TabButton active={tab === 'goals'} onClick={() => setTab('goals')} icon={<Target size={14} />}>{t('perfPage.tabGoals')}</TabButton>
+            <TabButton active={tab === 'reviews'} onClick={() => setTab('reviews')} icon={<ClipboardList size={14} />}>{t('perfPage.tabReviews')}</TabButton>
+            <TabButton active={tab === 'history'} onClick={() => setTab('history')} icon={<TrendingUp size={14} />}>{t('perfPage.tabHistory')}</TabButton>
           </div>
         </div>
       </Card>
 
       {tab === 'goals' && (
         filteredGoals.length === 0 ? (
-          <Card><EmptyState title="Brak celów" description="Nie znaleziono celów spełniających kryteria." icon={<Target size={22} />} /></Card>
+          <Card><EmptyState title={t('perfPage.emptyGoals.title')} description={t('perfPage.emptyGoals.desc')} icon={<Target size={22} />} /></Card>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {filteredGoals.map((g) => {
@@ -136,10 +138,10 @@ export function PerformancePage({ data, role, onRefresh }: PerformancePageProps)
                 <Card key={g.id} className="relative group">
                   {canWrite && canDelete && (
                     <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => { setEditingGoal(g); setGoalFormOpen(true); }} className="rounded-md bg-white/90 hover:bg-white p-1.5 text-ink-600 hover:text-brand-600 shadow-sm border border-ink-100" title="Edytuj">
+                      <button onClick={() => { setEditingGoal(g); setGoalFormOpen(true); }} className="rounded-md bg-white/90 hover:bg-white p-1.5 text-ink-600 hover:text-brand-600 shadow-sm border border-ink-100" title={t('common.edit')}>
                         <Pencil size={13} />
                       </button>
-                      <button onClick={() => setDeleting({ kind: 'goal', id: g.id, name: g.title })} className="rounded-md bg-white/90 hover:bg-white p-1.5 text-ink-600 hover:text-red-600 shadow-sm border border-ink-100" title="Usuń">
+                      <button onClick={() => setDeleting({ kind: 'goal', id: g.id, name: g.title })} className="rounded-md bg-white/90 hover:bg-white p-1.5 text-ink-600 hover:text-red-600 shadow-sm border border-ink-100" title={t('common.delete')}>
                         <Trash2 size={13} />
                       </button>
                     </div>
@@ -154,20 +156,20 @@ export function PerformancePage({ data, role, onRefresh }: PerformancePageProps)
                     </div>
                   </div>
                   <div className="mt-3 flex flex-wrap gap-1.5">
-                    <Badge variant={g.goal_type === 'okr' ? 'brand' : 'outline'} size="sm">{g.goal_type === 'okr' ? 'OKR' : 'Kwartalny'}</Badge>
+                    <Badge variant={g.goal_type === 'okr' ? 'brand' : 'outline'} size="sm">{g.goal_type === 'okr' ? t('perfPage.goalType.okr') : t('perfPage.goalType.quarter')}</Badge>
                     {g.quarter && <Badge variant="outline" size="sm">{g.quarter}</Badge>}
                     <Badge variant={g.status === 'completed' ? 'success' : g.status === 'overdue' ? 'error' : 'outline'} size="sm">
-                      {g.status === 'completed' ? 'Zrealizowany' : g.status === 'overdue' ? 'Przeterminowany' : 'Aktywny'}
+                      {g.status === 'completed' ? t('perfPage.goalStatus.completed') : g.status === 'overdue' ? t('perfPage.goalStatus.overdue') : t('perfPage.goalStatus.active')}
                     </Badge>
                   </div>
                   {g.target_date && (
                     <p className="mt-2 flex items-center gap-1.5 text-xs text-ink-400">
-                      <Calendar size={12} /> Termin: {formatDate(g.target_date)}
+                      <Calendar size={12} /> {t('perfPage.dueDate', { date: formatDate(g.target_date) })}
                     </p>
                   )}
                   <div className="mt-3">
                     <div className="flex justify-between text-xs text-ink-500 mb-1">
-                      <span>Postęp</span><span>{g.progress}%</span>
+                      <span>{t('perfPage.progress')}</span><span>{g.progress}%</span>
                     </div>
                     <div className="h-2 rounded-full bg-ink-100 overflow-hidden">
                       <div
@@ -191,7 +193,7 @@ export function PerformancePage({ data, role, onRefresh }: PerformancePageProps)
 
       {tab === 'reviews' && (
         filteredReviews.length === 0 ? (
-          <Card><EmptyState title="Brak ocen" description="Nie znaleziono ocen spełniających kryteria." icon={<ClipboardList size={22} />} /></Card>
+          <Card><EmptyState title={t('perfPage.emptyReviews.title')} description={t('perfPage.emptyReviews.desc')} icon={<ClipboardList size={22} />} /></Card>
         ) : (
           <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
             {filteredReviews.map((r) => {
@@ -200,10 +202,10 @@ export function PerformancePage({ data, role, onRefresh }: PerformancePageProps)
                 <Card key={r.id} className="relative group">
                   {canWrite && canDelete && (
                     <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                      <button onClick={() => { setEditingReview(r); setReviewFormOpen(true); }} className="rounded-md bg-white/90 hover:bg-white p-1.5 text-ink-600 hover:text-brand-600 shadow-sm border border-ink-100" title="Edytuj">
+                      <button onClick={() => { setEditingReview(r); setReviewFormOpen(true); }} className="rounded-md bg-white/90 hover:bg-white p-1.5 text-ink-600 hover:text-brand-600 shadow-sm border border-ink-100" title={t('common.edit')}>
                         <Pencil size={13} />
                       </button>
-                      <button onClick={() => setDeleting({ kind: 'review', id: r.id, name: r.review_period ?? r.review_type })} className="rounded-md bg-white/90 hover:bg-white p-1.5 text-ink-600 hover:text-red-600 shadow-sm border border-ink-100" title="Usuń">
+                      <button onClick={() => setDeleting({ kind: 'review', id: r.id, name: r.review_period ?? r.review_type })} className="rounded-md bg-white/90 hover:bg-white p-1.5 text-ink-600 hover:text-red-600 shadow-sm border border-ink-100" title={t('common.delete')}>
                         <Trash2 size={13} />
                       </button>
                     </div>
@@ -211,29 +213,29 @@ export function PerformancePage({ data, role, onRefresh }: PerformancePageProps)
                   <div className="flex items-start gap-3 pr-16">
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
-                        <h3 className="text-sm font-semibold text-ink-900">{r.review_period ?? 'Ocena'}</h3>
+                        <h3 className="text-sm font-semibold text-ink-900">{r.review_period ?? t('perfPage.review')}</h3>
                         <Badge variant="outline" size="sm">
-                          {r.review_type === 'periodic' ? 'Okresowa' : r.review_type === 'okr' ? 'OKR' : 'Roczna'}
+                          {r.review_type === 'periodic' ? t('perfPage.reviewType.periodic') : r.review_type === 'okr' ? t('perfPage.reviewType.okr') : t('perfPage.reviewType.annual')}
                         </Badge>
                       </div>
                       <Badge variant={r.status === 'acknowledged' ? 'success' : r.status === 'submitted' ? 'brand' : 'outline'} size="sm" className="mt-1">
-                        {r.status === 'acknowledged' ? 'Potwierdzona' : r.status === 'submitted' ? 'Przekazana' : 'Robocza'}
+                        {r.status === 'acknowledged' ? t('perfPage.reviewStatus.acknowledged') : r.status === 'submitted' ? t('perfPage.reviewStatus.submitted') : t('perfPage.reviewStatus.draft')}
                       </Badge>
                     </div>
                   </div>
                   <div className="mt-3 grid grid-cols-2 gap-3">
-                    <RatingBlock label="Ocena managera" rating={r.manager_rating} color="brand" />
-                    <RatingBlock label="Samoocena" rating={r.self_rating} color="sky" />
+                    <RatingBlock label={t('perfPage.managerRating')} rating={r.manager_rating} color="brand" />
+                    <RatingBlock label={t('perfPage.selfRating')} rating={r.self_rating} color="sky" />
                   </div>
                   {r.manager_feedback && (
                     <div className="mt-3 pt-3 border-t border-ink-100">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-ink-500 mb-1">Feedback managera</p>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-ink-500 mb-1">{t('perfPage.managerFeedback')}</p>
                       <p className="text-xs text-ink-600">{r.manager_feedback}</p>
                     </div>
                   )}
                   {r.self_assessment && (
                     <div className="mt-2">
-                      <p className="text-xs font-semibold uppercase tracking-wide text-ink-500 mb-1">Samoocena</p>
+                      <p className="text-xs font-semibold uppercase tracking-wide text-ink-500 mb-1">{t('perfPage.selfAssessment')}</p>
                       <p className="text-xs text-ink-600">{r.self_assessment}</p>
                     </div>
                   )}
@@ -253,15 +255,15 @@ export function PerformancePage({ data, role, onRefresh }: PerformancePageProps)
       {tab === 'history' && (
         <div className="space-y-4">
           <Card>
-            <Select label="Pracownik" value={historyEmployee} onChange={(e) => setHistoryEmployee(e.target.value)}>
-              <option value="all">— wybierz pracownika —</option>
+            <Select label={t('perfPage.historyEmployee')} value={historyEmployee} onChange={(e) => setHistoryEmployee(e.target.value)}>
+              <option value="all">{t('common.select')}</option>
               {data.employees.map((emp) => (
                 <option key={emp.id} value={emp.id}>{emp.first_name} {emp.last_name}</option>
               ))}
             </Select>
           </Card>
           {!historyEmployeeObj ? (
-            <Card><EmptyState title="Wybierz pracownika" description="Wybierz pracownika, aby zobaczyć historię jego celów i ocen." icon={<TrendingUp size={22} />} /></Card>
+            <Card><EmptyState title={t('perfPage.emptyHistory.title')} description={t('perfPage.emptyHistory.desc')} icon={<TrendingUp size={22} />} /></Card>
           ) : (
             <div className="space-y-4">
               <Card>
@@ -275,9 +277,9 @@ export function PerformancePage({ data, role, onRefresh }: PerformancePageProps)
               </Card>
               <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
                 <Card>
-                  <h4 className="text-sm font-semibold text-ink-900 mb-3 flex items-center gap-2"><Target size={15} /> Cele ({employeeGoals.length})</h4>
+                  <h4 className="text-sm font-semibold text-ink-900 mb-3 flex items-center gap-2"><Target size={15} /> {t('perfPage.historyGoals', { count: employeeGoals.length })}</h4>
                   {employeeGoals.length === 0 ? (
-                    <p className="text-xs text-ink-400">Brak celów.</p>
+                    <p className="text-xs text-ink-400">{t('perfPage.noGoals')}</p>
                   ) : (
                     <div className="space-y-2">
                       {employeeGoals.map((g) => (
@@ -285,7 +287,7 @@ export function PerformancePage({ data, role, onRefresh }: PerformancePageProps)
                           <div className="flex items-center justify-between gap-2">
                             <span className="text-xs font-medium text-ink-800 truncate">{g.title}</span>
                             <Badge variant={g.status === 'completed' ? 'success' : g.status === 'overdue' ? 'error' : 'outline'} size="sm">
-                              {g.status === 'completed' ? 'Zrealizowany' : g.status === 'overdue' ? 'Przeterminowany' : 'Aktywny'}
+                              {g.status === 'completed' ? t('perfPage.goalStatus.completed') : g.status === 'overdue' ? t('perfPage.goalStatus.overdue') : t('perfPage.goalStatus.active')}
                             </Badge>
                           </div>
                           {g.quarter && <p className="text-[11px] text-ink-400 mt-0.5">{g.quarter}</p>}
@@ -298,9 +300,9 @@ export function PerformancePage({ data, role, onRefresh }: PerformancePageProps)
                   )}
                 </Card>
                 <Card>
-                  <h4 className="text-sm font-semibold text-ink-900 mb-3 flex items-center gap-2"><ClipboardList size={15} /> Oceny ({employeeReviews.length})</h4>
+                  <h4 className="text-sm font-semibold text-ink-900 mb-3 flex items-center gap-2"><ClipboardList size={15} /> {t('perfPage.historyReviews', { count: employeeReviews.length })}</h4>
                   {employeeReviews.length === 0 ? (
-                    <p className="text-xs text-ink-400">Brak ocen.</p>
+                    <p className="text-xs text-ink-400">{t('perfPage.noReviews')}</p>
                   ) : (
                     <div className="space-y-2">
                       {employeeReviews.map((r) => (
@@ -308,7 +310,7 @@ export function PerformancePage({ data, role, onRefresh }: PerformancePageProps)
                           <div className="flex items-center justify-between gap-2">
                             <span className="text-xs font-medium text-ink-800">{r.review_period ?? r.review_type}</span>
                             <Badge variant={r.status === 'acknowledged' ? 'success' : r.status === 'submitted' ? 'brand' : 'outline'} size="sm">
-                              {r.status === 'acknowledged' ? 'Potwierdzona' : r.status === 'submitted' ? 'Przekazana' : 'Robocza'}
+                              {r.status === 'acknowledged' ? t('perfPage.reviewStatus.acknowledged') : r.status === 'submitted' ? t('perfPage.reviewStatus.submitted') : t('perfPage.reviewStatus.draft')}
                             </Badge>
                           </div>
                           <div className="mt-1.5 flex items-center gap-3 text-[11px] text-ink-500">
@@ -344,9 +346,9 @@ export function PerformancePage({ data, role, onRefresh }: PerformancePageProps)
       />
       <ConfirmDialog
         open={!!deleting}
-        title={deleting?.kind === 'goal' ? 'Usunąć cel?' : 'Usunąć ocenę?'}
-        message={`Czy na pewno chcesz usunąć "${deleting?.name ?? ''}"? Tej operacji nie można cofnąć.`}
-        confirmLabel="Usuń"
+        title={deleting?.kind === 'goal' ? t('confirm.deleteGoal.title') : t('confirm.deleteReview.title')}
+        message={t('confirm.deletePerf.msg', { name: deleting?.name ?? '' })}
+        confirmLabel={t('common.delete')}
         destructive
         loading={deleteLoading}
         onConfirm={handleDelete}

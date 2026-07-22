@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Input, Select } from '../ui/Input';
+import { useLang } from '../../hooks/useLang';
 import type { OrgSnapshot, PositionInput } from '../../lib/api';
 import type { Position } from '../../lib/types';
 
@@ -30,6 +31,7 @@ const EMPTY: PositionInput = {
 const LEVELS = ['C-level', 'Director', 'Manager', 'Specialist', 'Junior'];
 
 export function PositionFormModal({ open, onClose, onSubmit, data, position, loading }: PositionFormModalProps) {
+  const { t } = useLang();
   const [form, setForm] = useState<PositionInput>(EMPTY);
   const [responsibilitiesText, setResponsibilitiesText] = useState('');
   const [requirementsText, setRequirementsText] = useState('');
@@ -67,7 +69,7 @@ export function PositionFormModal({ open, onClose, onSubmit, data, position, loa
   const handleSubmit = async () => {
     setError(null);
     if (!form.title.trim()) {
-      setError('Nazwa stanowiska jest wymagana.');
+      setError(t('posForm.err.titleRequired'));
       return;
     }
     const responsibilities = responsibilitiesText.split('\n').map((s) => s.trim()).filter(Boolean);
@@ -82,7 +84,7 @@ export function PositionFormModal({ open, onClose, onSubmit, data, position, loa
       });
       onClose();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Wystąpił błąd');
+      setError(e instanceof Error ? e.message : t('error.generic'));
     }
   };
 
@@ -91,13 +93,13 @@ export function PositionFormModal({ open, onClose, onSubmit, data, position, loa
       open={open}
       onClose={onClose}
       size="lg"
-      title={position ? 'Edytuj stanowisko' : 'Nowe stanowisko'}
+      title={position ? t('posForm.title.edit') : t('posForm.title.new')}
       subtitle={position?.title}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose} disabled={loading}>Anuluj</Button>
+          <Button variant="secondary" onClick={onClose} disabled={loading}>{t('common.cancel')}</Button>
           <Button variant="primary" onClick={handleSubmit} disabled={loading}>
-            {loading ? 'Zapisywanie…' : position ? 'Zapisz zmiany' : 'Dodaj stanowisko'}
+            {loading ? t('posForm.saving') : position ? t('posForm.saveEdit') : t('posForm.saveNew')}
           </Button>
         </>
       }
@@ -106,22 +108,22 @@ export function PositionFormModal({ open, onClose, onSubmit, data, position, loa
         {error && (
           <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">{error}</div>
         )}
-        <Input label="Nazwa stanowiska *" value={form.title} onChange={(e) => set('title', e.target.value)} />
+        <Input label={t('posForm.title')} value={form.title} onChange={(e) => set('title', e.target.value)} />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Select label="Dział" value={form.department_id ?? ''} onChange={(e) => set('department_id', e.target.value || null)}>
+          <Select label={t('posForm.department')} value={form.department_id ?? ''} onChange={(e) => set('department_id', e.target.value || null)}>
             <option value="">—</option>
             {data.departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
           </Select>
-          <Select label="Poziom" value={form.level ?? ''} onChange={(e) => set('level', e.target.value || null)}>
+          <Select label={t('posForm.level')} value={form.level ?? ''} onChange={(e) => set('level', e.target.value || null)}>
             {LEVELS.map((l) => <option key={l} value={l}>{l}</option>)}
           </Select>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Input label="Płaca min (PLN)" type="number" value={form.min_salary ?? ''} onChange={(e) => set('min_salary', e.target.value ? Number(e.target.value) : null)} />
-          <Input label="Płaca max (PLN)" type="number" value={form.max_salary ?? ''} onChange={(e) => set('max_salary', e.target.value ? Number(e.target.value) : null)} />
+          <Input label={t('posForm.minSalary')} type="number" value={form.min_salary ?? ''} onChange={(e) => set('min_salary', e.target.value ? Number(e.target.value) : null)} />
+          <Input label={t('posForm.maxSalary')} type="number" value={form.max_salary ?? ''} onChange={(e) => set('max_salary', e.target.value ? Number(e.target.value) : null)} />
         </div>
         <div>
-          <label className="label">Opis</label>
+          <label className="label">{t('posForm.description')}</label>
           <textarea
             className="input min-h-[80px] resize-y"
             value={form.description ?? ''}
@@ -129,23 +131,23 @@ export function PositionFormModal({ open, onClose, onSubmit, data, position, loa
           />
         </div>
         <div>
-          <label className="label">Zakres obowiązków (po jednym w wierszu)</label>
+          <label className="label">{t('posForm.responsibilities')}</label>
           <textarea
             className="input min-h-[120px] resize-y font-mono text-xs"
             value={responsibilitiesText}
             onChange={(e) => setResponsibilitiesText(e.target.value)}
-            placeholder={'Zarządzanie zespołem\nPlanowanie budżetu'}
+            placeholder={t('posForm.responsibilitiesPh')}
           />
         </div>
         <div>
-          <label className="label">Uprawnienia decyzyjne</label>
+          <label className="label">{t('posForm.decisionRights')}</label>
           <textarea
             className="input min-h-[60px] resize-y"
             value={form.decision_rights ?? ''}
             onChange={(e) => set('decision_rights', e.target.value || null)}
           />
         </div>
-        <Input label="Wymagania (oddzielone przecinkami)" value={requirementsText} onChange={(e) => setRequirementsText(e.target.value)} placeholder="np. Excel, MS Office, Prawo pracy" />
+        <Input label={t('posForm.requirements')} value={requirementsText} onChange={(e) => setRequirementsText(e.target.value)} placeholder={t('posForm.requirementsPh')} />
         <label className="flex items-center gap-2.5 cursor-pointer select-none">
           <input
             type="checkbox"
@@ -153,7 +155,7 @@ export function PositionFormModal({ open, onClose, onSubmit, data, position, loa
             onChange={(e) => set('is_vacant', e.target.checked)}
             className="h-4 w-4 rounded border-ink-300 text-brand-600 focus:ring-brand-200"
           />
-          <span className="text-sm text-ink-700">Wakat (stanowisko nieobsadzone)</span>
+          <span className="text-sm text-ink-700">{t('posForm.isVacant')}</span>
         </label>
       </div>
     </Modal>

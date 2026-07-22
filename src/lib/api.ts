@@ -298,7 +298,7 @@ export async function fetchOrgSnapshot(): Promise<OrgSnapshot> {
     positions,
     employees,
     processes,
-    documents: documentsWithDeps.map(({ ...d }) => d),
+    documents: documentsWithDeps.map(({ department, ...d }) => d),
     roles,
     accessControls,
     changeHistory,

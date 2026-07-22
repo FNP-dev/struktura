@@ -14,6 +14,7 @@ import type { OrgSnapshot, DocumentInput } from '../lib/api';
 import { createDocument, updateDocument, deleteDocument } from '../lib/api';
 import type { DocumentItem } from '../lib/types';
 import { can } from '../hooks/useAuth';
+import { useLang } from '../hooks/useLang';
 
 interface DocumentsPageProps {
   data: OrgSnapshot;
@@ -22,14 +23,15 @@ interface DocumentsPageProps {
 }
 
 const TYPE_GROUPS = [
-  { type: 'regulation', label: 'Regulaminy' },
-  { type: 'procedure', label: 'Procedury' },
-  { type: 'policy', label: 'Polityki firmowe' },
-  { type: 'instruction', label: 'Instrukcje' },
+  { type: 'regulation' },
+  { type: 'procedure' },
+  { type: 'policy' },
+  { type: 'instruction' },
 ];
 
 export function DocumentsPage({ data, role, onRefresh }: DocumentsPageProps) {
   const { documents, departments } = data;
+  const { t } = useLang();
   const [query, setQuery] = useState('');
   const [typeFilter, setTypeFilter] = useState('all');
   const [statusFilter, setStatusFilter] = useState('all');
@@ -45,7 +47,7 @@ export function DocumentsPage({ data, role, onRefresh }: DocumentsPageProps) {
   const canWrite = can(role, 'write', 'documents');
   const canDelete = can(role, 'delete', 'documents');
 
-  const deptName = (id: string | null) => departments.find((d) => d.id === id)?.name ?? 'Firma';
+  const deptName = (id: string | null) => departments.find((d) => d.id === id)?.name ?? t('docPage.companyGeneral');
 
   const filtered = useMemo(() => {
     const q = query.toLowerCase().trim();
@@ -81,7 +83,7 @@ export function DocumentsPage({ data, role, onRefresh }: DocumentsPageProps) {
       setDetail(null);
       onRefresh();
     } catch (e) {
-      alert(e instanceof Error ? e.message : 'Nie udało się usunąć');
+      alert(e instanceof Error ? e.message : t('error.deleteFailed'));
     } finally { setDeleteLoading(false); }
   };
 
@@ -92,49 +94,49 @@ export function DocumentsPage({ data, role, onRefresh }: DocumentsPageProps) {
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-400" />
-              <input className="input pl-9" placeholder="Szukaj dokumentu…" value={query} onChange={(e) => setQuery(e.target.value)} />
+              <input className="input pl-9" placeholder={t('docPage.searchPh')} value={query} onChange={(e) => setQuery(e.target.value)} />
               {query && <button onClick={() => setQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-400 hover:text-ink-600"><X size={14} /></button>}
             </div>
             {canWrite && (
-              <Button variant="primary" onClick={openCreate}><Plus size={16} /> Dodaj dokument</Button>
+              <Button variant="primary" onClick={openCreate}><Plus size={16} /> {t('docPage.addDocument')}</Button>
             )}
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <Select value={typeFilter} onChange={(e) => setTypeFilter(e.target.value)}>
-              <option value="all">Wszystkie typy</option>
-              {TYPE_GROUPS.map((g) => <option key={g.type} value={g.type}>{g.label}</option>)}
+              <option value="all">{t('docPage.filterTypeAll')}</option>
+              {TYPE_GROUPS.map((g) => <option key={g.type} value={g.type}>{t(`docGroup.${g.type}`)}</option>)}
             </Select>
             <Select value={statusFilter} onChange={(e) => setStatusFilter(e.target.value)}>
-              <option value="all">Wszystkie statusy</option>
-              <option value="active">Obowiązujące</option>
-              <option value="draft">Robocze</option>
-              <option value="archived">Zarchiwizowane</option>
+              <option value="all">{t('docPage.filterStatusAll')}</option>
+              <option value="active">{t('badge.docStatus.active')}</option>
+              <option value="draft">{t('badge.docStatus.draft')}</option>
+              <option value="archived">{t('badge.docStatus.archived')}</option>
             </Select>
             <Select value={deptFilter} onChange={(e) => setDeptFilter(e.target.value)}>
-              <option value="all">Wszystkie działy</option>
+              <option value="all">{t('docPage.filterDeptAll')}</option>
               {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
             </Select>
           </div>
-          <p className="text-xs text-ink-500">Znaleziono <strong className="text-ink-800">{filtered.length}</strong> z {documents.length} dokumentów</p>
+          <p className="text-xs text-ink-500">{t('docPage.results', { found: filtered.length, total: documents.length })}</p>
         </div>
       </Card>
 
       {filtered.length === 0 ? (
-        <Card><EmptyState title="Brak dokumentów" description="Nie znaleziono dokumentów spełniających kryteria." icon={<FileText size={22} />} /></Card>
+        <Card><EmptyState title={t('docPage.empty.title')} description={t('docPage.empty.desc')} icon={<FileText size={22} />} /></Card>
       ) : (
         <div className="space-y-6">
           {grouped.map((group) => (
             <div key={group.type}>
-              <CardHeader title={group.label} subtitle={`${group.items.length} dokumentów`} />
+              <CardHeader title={t(`docGroup.${group.type}`)} subtitle={t('docPage.groupCount', { count: group.items.length })} />
               <div className="grid grid-cols-1 md:grid-cols-2 gap-3 mt-2">
                 {group.items.map((doc) => (
                   <Card key={doc.id} hover className="flex flex-col gap-3 relative group" onClick={() => setDetail(doc)}>
                     {canWrite && canDelete && (
                       <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                        <button onClick={(e) => { e.stopPropagation(); openEdit(doc); }} className="rounded-md bg-white/90 hover:bg-white p-1.5 text-ink-600 hover:text-brand-600 shadow-sm border border-ink-100" title="Edytuj">
+                        <button onClick={(e) => { e.stopPropagation(); openEdit(doc); }} className="rounded-md bg-white/90 hover:bg-white p-1.5 text-ink-600 hover:text-brand-600 shadow-sm border border-ink-100" title={t('common.edit')}>
                           <Pencil size={13} />
                         </button>
-                        <button onClick={(e) => { e.stopPropagation(); setDeleting(doc); }} className="rounded-md bg-white/90 hover:bg-white p-1.5 text-ink-600 hover:text-red-600 shadow-sm border border-ink-100" title="Usuń">
+                        <button onClick={(e) => { e.stopPropagation(); setDeleting(doc); }} className="rounded-md bg-white/90 hover:bg-white p-1.5 text-ink-600 hover:text-red-600 shadow-sm border border-ink-100" title={t('common.delete')}>
                           <Trash2 size={13} />
                         </button>
                       </div>
@@ -160,10 +162,10 @@ export function DocumentsPage({ data, role, onRefresh }: DocumentsPageProps) {
                       </div>
                       {doc.file_url ? (
                         <a href={doc.file_url} target="_blank" rel="noreferrer" onClick={(e) => e.stopPropagation()} className="flex items-center gap-1 text-brand-600 hover:text-brand-700 font-medium">
-                          <ExternalLink size={12} /> Otwórz
+                          <ExternalLink size={12} /> {t('common.open')}
                         </a>
                       ) : (
-                        <span className="flex items-center gap-1 text-ink-400"><Download size={12} /> Brak pliku</span>
+                        <span className="flex items-center gap-1 text-ink-400"><Download size={12} /> {t('docPage.noFile')}</span>
                       )}
                     </div>
                   </Card>
@@ -194,9 +196,9 @@ export function DocumentsPage({ data, role, onRefresh }: DocumentsPageProps) {
       />
       <ConfirmDialog
         open={!!deleting}
-        title="Usunąć dokument?"
-        message={`Czy na pewno chcesz usunąć "${deleting?.title ?? ''}"? Wszystkie wersje zostaną trwale usunięte.`}
-        confirmLabel="Usuń"
+        title={t('confirm.deleteDocument.title')}
+        message={t('confirm.deleteDocument.msg', { name: deleting?.title ?? '' })}
+        confirmLabel={t('common.delete')}
         destructive
         loading={deleteLoading}
         onConfirm={handleDelete}

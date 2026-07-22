@@ -1,5 +1,6 @@
 import { useState } from 'react';
 import { ChevronRight, ChevronDown, Users, MapPin, Building2 } from 'lucide-react';
+import { useLang } from '../hooks/useLang';
 import { Card } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Avatar } from '../components/ui/Avatar';
@@ -11,40 +12,23 @@ import { fullName } from '../lib/format';
 import type { EmployeeWithRelations } from '../lib/types';
 import { cn } from '../lib/utils';
 
-interface DepartmentMatchable {
-  name: string;
-  code: string | null;
-  description: string | null;
-}
-
-/* interface DepartmentLocation {
-  city: string;
-} */
-
-/* interface DepartmentManager {
-  avatar_url?: string;
-  first_name: string;
-  last_name: string;
-}
- */
-type DepartmentTreeNode = ReturnType<typeof buildDepartmentTree>[number];
-
 interface DepartmentsPageProps {
   data: OrgSnapshot;
   onSelectEmployee: (e: EmployeeWithRelations) => void;
 }
 
 export function DepartmentsPage({ data, onSelectEmployee }: DepartmentsPageProps) {
-  const [query, setQuery] = useState<string>('');
+  const { t } = useLang();
+  const [query, setQuery] = useState('');
   const [expanded, setExpanded] = useState<Set<string>>(new Set());
-  const tree: DepartmentTreeNode[] = buildDepartmentTree(data.departments);
+  const tree = buildDepartmentTree(data.departments);
 
   // Auto-expand top-level by default
   if (expanded.size === 0 && tree.length > 0) {
     setExpanded(new Set(tree.map((n) => n.id)));
   }
 
-  const matches = (d: DepartmentMatchable): boolean => {
+  const matches = (d: { name: string; code: string | null; description: string | null }) => {
     if (!query) return true;
     const q = query.toLowerCase();
     return (
@@ -54,10 +38,10 @@ export function DepartmentsPage({ data, onSelectEmployee }: DepartmentsPageProps
     );
   };
 
-  const flat: DepartmentTreeNode[] = flattenDepartmentTree(tree);
-  const filteredIds = new Set<string>(flat.filter((d) => matches(d)).map((d) => d.id));
+  const flat = flattenDepartmentTree(tree);
+  const filteredIds = new Set(flat.filter((d) => matches(d)).map((d) => d.id));
   // Expand ancestors of any match
-  const expandedWithAncestors = new Set<string>(expanded);
+  const expandedWithAncestors = new Set(expanded);
   for (const d of flat) {
     if (filteredIds.has(d.id)) {
       let p = d.parent_id;
@@ -69,7 +53,7 @@ export function DepartmentsPage({ data, onSelectEmployee }: DepartmentsPageProps
     }
   }
 
-  const toggle = (id: string): void =>
+  const toggle = (id: string) =>
     setExpanded((prev) => {
       const next = new Set(prev);
       if (next.has(id)) next.delete(id);
@@ -77,7 +61,7 @@ export function DepartmentsPage({ data, onSelectEmployee }: DepartmentsPageProps
       return next;
     });
 
-  const renderNode = (node: DepartmentTreeNode, depth: number): React.ReactNode => {
+  const renderNode = (node: typeof tree[number], depth: number): React.ReactNode => {
     const Icon = getDepartmentIcon(node.icon);
     const isExpanded = expandedWithAncestors.has(node.id);
     const hasChildren = node.children.length > 0;
@@ -87,7 +71,7 @@ export function DepartmentsPage({ data, onSelectEmployee }: DepartmentsPageProps
       data.employees.filter((e) => e.department_id === node.id).length;
 
     // Hide nodes that don't match (and have no matching descendants)
-    const hasMatchInSubtree = (n: DepartmentTreeNode): boolean => {
+    const hasMatchInSubtree = (n: typeof tree[number]): boolean => {
       if (filteredIds.has(n.id)) return true;
       return n.children.some(hasMatchInSubtree);
     };
@@ -106,7 +90,7 @@ export function DepartmentsPage({ data, onSelectEmployee }: DepartmentsPageProps
             <button
               onClick={() => toggle(node.id)}
               className="shrink-0 rounded p-0.5 text-ink-400 hover:bg-ink-100 hover:text-ink-700 transition-colors"
-              aria-label={isExpanded ? 'Zwiń' : 'Rozwiń'}
+              aria-label={isExpanded ? t('deptPage.collapse') : t('deptPage.expand')}
             >
               {isExpanded ? <ChevronDown size={16} /> : <ChevronRight size={16} />}
             </button>
@@ -161,9 +145,8 @@ export function DepartmentsPage({ data, onSelectEmployee }: DepartmentsPageProps
                   size="xs"
                 />
                 <span className="text-xs text-ink-500">
-                  <span className="text-ink-400">Kierownik: </span>
                   <span className="font-medium text-ink-700 group-hover:text-brand-700">
-                    {fullName({ first_name: node.manager.first_name, last_name: node.manager.last_name })}
+                    {t('deptPage.manager', { name: fullName({ first_name: node.manager.first_name, last_name: node.manager.last_name }) })}
                   </span>
                 </span>
               </button>
@@ -184,13 +167,13 @@ export function DepartmentsPage({ data, onSelectEmployee }: DepartmentsPageProps
       <Card>
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mb-4">
           <div>
-            <h2 className="text-lg font-semibold text-ink-900">Struktura organizacyjna</h2>
-            <p className="text-sm text-ink-500">{data.departments.length} jednostek w {tree.length} pionach</p>
+            <h2 className="text-lg font-semibold text-ink-900">{t('deptPage.title')}</h2>
+            <p className="text-sm text-ink-500">{t('deptPage.subtitle', { total: data.departments.length, pions: tree.length })}</p>
           </div>
           <div className="w-full sm:w-72">
             <Input
               icon={<Building2 size={15} />}
-              placeholder="Filtruj działy…"
+              placeholder={t('deptPage.filterPh')}
               value={query}
               onChange={(e) => setQuery(e.target.value)}
             />
@@ -208,7 +191,7 @@ export function DepartmentsPage({ data, onSelectEmployee }: DepartmentsPageProps
         </div>
 
         {tree.length === 0 ? (
-          <EmptyState title="Brak działów" description="Nie znaleziono jednostek organizacyjnych." icon={<Building2 size={22} />} />
+          <EmptyState title={t('deptPage.empty.title')} description={t('deptPage.empty.desc')} icon={<Building2 size={22} />} />
         ) : (
           <div className="space-y-0.5">{tree.map((node) => renderNode(node, 0))}</div>
         )}

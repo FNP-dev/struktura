@@ -13,6 +13,7 @@ import type { OrgSnapshot, PositionInput } from '../lib/api';
 import { createPosition, updatePosition, deletePosition } from '../lib/api';
 import type { Position } from '../lib/types';
 import { can } from '../hooks/useAuth';
+import { useLang } from '../hooks/useLang';
 
 interface PositionsPageProps {
   data: OrgSnapshot;
@@ -30,6 +31,7 @@ const LEVEL_VARIANT: Record<string, 'brand' | 'info' | 'success' | 'warning' | '
 
 export function PositionsPage({ data, role, onRefresh }: PositionsPageProps) {
   const { positions, departments, employees } = data;
+  const { t } = useLang();
   const [query, setQuery] = useState('');
   const [deptFilter, setDeptFilter] = useState('all');
   const [levelFilter, setLevelFilter] = useState('all');
@@ -88,17 +90,17 @@ export function PositionsPage({ data, role, onRefresh }: PositionsPageProps) {
       if (selected?.id === deleting.id) setSelected(null);
       onRefresh();
     } catch (e) {
-      alert(e instanceof Error ? e.message : 'Nie udało się usunąć');
+      alert(e instanceof Error ? e.message : t('error.deleteFailed'));
     } finally { setDeleteLoading(false); }
   };
 
   return (
     <div className="space-y-6 animate-fade-in">
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
-        <Card className="p-4"><p className="text-2xl font-bold text-ink-900">{positions.length}</p><p className="text-xs text-ink-500 mt-0.5">Stanowisk</p></Card>
-        <Card className="p-4"><p className="text-2xl font-bold text-amber-600">{vacantCount}</p><p className="text-xs text-ink-500 mt-0.5">Wakatów</p></Card>
-        <Card className="p-4"><p className="text-2xl font-bold text-emerald-600">{positions.length - vacantCount}</p><p className="text-xs text-ink-500 mt-0.5">Obsadzonych</p></Card>
-        <Card className="p-4"><p className="text-2xl font-bold text-sky-600">{levels.length}</p><p className="text-xs text-ink-500 mt-0.5">Poziomów</p></Card>
+        <Card className="p-4"><p className="text-2xl font-bold text-ink-900">{positions.length}</p><p className="text-xs text-ink-500 mt-0.5">{t('posPage.count')}</p></Card>
+        <Card className="p-4"><p className="text-2xl font-bold text-amber-600">{vacantCount}</p><p className="text-xs text-ink-500 mt-0.5">{t('posPage.vacant')}</p></Card>
+        <Card className="p-4"><p className="text-2xl font-bold text-emerald-600">{positions.length - vacantCount}</p><p className="text-xs text-ink-500 mt-0.5">{t('posPage.filled')}</p></Card>
+        <Card className="p-4"><p className="text-2xl font-bold text-sky-600">{levels.length}</p><p className="text-xs text-ink-500 mt-0.5">{t('posPage.levels')}</p></Card>
       </div>
 
       <Card>
@@ -106,33 +108,33 @@ export function PositionsPage({ data, role, onRefresh }: PositionsPageProps) {
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-400" />
-              <input className="input pl-9" placeholder="Szukaj stanowiska…" value={query} onChange={(e) => setQuery(e.target.value)} />
+              <input className="input pl-9" placeholder={t('posPage.searchPh')} value={query} onChange={(e) => setQuery(e.target.value)} />
               {query && <button onClick={() => setQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-400 hover:text-ink-600"><X size={14} /></button>}
             </div>
             {canWrite && (
-              <Button variant="primary" onClick={openCreate}><Plus size={16} /> Dodaj stanowisko</Button>
+              <Button variant="primary" onClick={openCreate}><Plus size={16} /> {t('posPage.addPosition')}</Button>
             )}
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
             <Select value={deptFilter} onChange={(e) => setDeptFilter(e.target.value)}>
-              <option value="all">Wszystkie działy</option>
+              <option value="all">{t('posPage.filterDeptAll')}</option>
               {departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
             </Select>
             <Select value={levelFilter} onChange={(e) => setLevelFilter(e.target.value)}>
-              <option value="all">Wszystkie poziomy</option>
+              <option value="all">{t('posPage.filterLevelAll')}</option>
               {levels.map((l) => <option key={l} value={l}>{l}</option>)}
             </Select>
             <Select value={vacancyFilter} onChange={(e) => setVacancyFilter(e.target.value as typeof vacancyFilter)}>
-              <option value="all">Wszystkie statusy</option>
-              <option value="filled">Obsadzone</option>
-              <option value="vacant">Wakaty</option>
+              <option value="all">{t('posPage.filterStatusAll')}</option>
+              <option value="filled">{t('posPage.filterFilled')}</option>
+              <option value="vacant">{t('posPage.filterVacant')}</option>
             </Select>
           </div>
         </div>
       </Card>
 
       {filtered.length === 0 ? (
-        <Card><EmptyState title="Brak stanowisk" description="Nie znaleziono stanowisk spełniających kryteria." icon={<Briefcase size={22} />} /></Card>
+        <Card><EmptyState title={t('posPage.empty.title')} description={t('posPage.empty.desc')} icon={<Briefcase size={22} />} /></Card>
       ) : (
         <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
           {filtered.map((p) => {
@@ -145,9 +147,9 @@ export function PositionsPage({ data, role, onRefresh }: PositionsPageProps) {
                     <p className="text-xs text-ink-400 truncate mt-0.5">{deptName(p.department_id)}</p>
                   </div>
                   {p.is_vacant ? (
-                    <Badge variant="warning" size="sm"><AlertCircle size={11} /> Wakat</Badge>
+                    <Badge variant="warning" size="sm"><AlertCircle size={11} /> {t('badge.vacant')}</Badge>
                   ) : (
-                    <Badge variant="success" size="sm"><CheckCircle2 size={11} /> Obsadzone</Badge>
+                    <Badge variant="success" size="sm"><CheckCircle2 size={11} /> {t('badge.filled')}</Badge>
                   )}
                 </div>
                 <p className="text-sm text-ink-600 line-clamp-2">{p.description ?? '—'}</p>
@@ -155,7 +157,7 @@ export function PositionsPage({ data, role, onRefresh }: PositionsPageProps) {
                   {p.level && <Badge variant={LEVEL_VARIANT[p.level] ?? 'neutral'} size="sm">{p.level}</Badge>}
                   <span className="text-xs text-ink-500">{formatSalary(p.min_salary, p.max_salary)}</span>
                 </div>
-                {h && <p className="mt-2 pt-2 border-t border-ink-100 text-xs text-ink-500 truncate">Obsadzone przez: <span className="text-ink-700 font-medium">{h.first_name} {h.last_name}</span></p>}
+                {h && <p className="mt-2 pt-2 border-t border-ink-100 text-xs text-ink-500 truncate">{t('posPage.heldBy', { name: `${h.first_name} ${h.last_name}` })}</p>}
               </Card>
             );
           })}
@@ -171,9 +173,9 @@ export function PositionsPage({ data, role, onRefresh }: PositionsPageProps) {
         subtitle={selected ? deptName(selected.department_id) : undefined}
         footer={
           <>
-            <Button variant="secondary" onClick={() => setSelected(null)}>Zamknij</Button>
-            {selected && canWrite && <Button variant="secondary" onClick={() => { openEdit(selected); setSelected(null); }}><Pencil size={14} /> Edytuj</Button>}
-            {selected && canDelete && <Button variant="danger" onClick={() => { setDeleting(selected); }}><Trash2 size={14} /> Usuń</Button>}
+            <Button variant="secondary" onClick={() => setSelected(null)}>{t('common.close')}</Button>
+            {selected && canWrite && <Button variant="secondary" onClick={() => { openEdit(selected); setSelected(null); }}><Pencil size={14} /> {t('common.edit')}</Button>}
+            {selected && canDelete && <Button variant="danger" onClick={() => { setDeleting(selected); }}><Trash2 size={14} /> {t('common.delete')}</Button>}
           </>
         }
       >
@@ -181,23 +183,23 @@ export function PositionsPage({ data, role, onRefresh }: PositionsPageProps) {
           <div className="space-y-5">
             <div className="flex flex-wrap gap-2">
               {selected.level && <Badge variant={LEVEL_VARIANT[selected.level] ?? 'neutral'}>{selected.level}</Badge>}
-              {selected.is_vacant ? <Badge variant="warning">Wakat</Badge> : <Badge variant="success">Obsadzone</Badge>}
+              {selected.is_vacant ? <Badge variant="warning">{t('badge.vacant')}</Badge> : <Badge variant="success">{t('badge.filled')}</Badge>}
             </div>
             {selected.description && <p className="text-sm text-ink-700">{selected.description}</p>}
 
             <div className="grid grid-cols-2 gap-4">
               <div className="rounded-lg border border-ink-100 p-3">
-                <p className="text-xs text-ink-400">Widełki wynagrodzenia</p>
+                <p className="text-xs text-ink-400">{t('posPage.salaryRange')}</p>
                 <p className="text-sm font-medium text-ink-800 mt-0.5">{formatSalary(selected.min_salary, selected.max_salary)}</p>
               </div>
               <div className="rounded-lg border border-ink-100 p-3">
-                <p className="text-xs text-ink-400">Dział</p>
+                <p className="text-xs text-ink-400">{t('empPage.colDepartment')}</p>
                 <p className="text-sm font-medium text-ink-800 mt-0.5">{deptName(selected.department_id)}</p>
               </div>
             </div>
 
             {selected.responsibilities && selected.responsibilities.length > 0 && (
-              <Section title="Zakres obowiązków">
+              <Section title={t('posPage.responsibilities')}>
                 <ul className="space-y-1.5">
                   {selected.responsibilities.map((r, i) => (
                     <li key={i} className="flex items-start gap-2 text-sm text-ink-700"><ChevronRight size={14} className="text-brand-500 mt-0.5 shrink-0" />{r}</li>
@@ -207,13 +209,13 @@ export function PositionsPage({ data, role, onRefresh }: PositionsPageProps) {
             )}
 
             {selected.decision_rights && (
-              <Section title="Uprawnienia decyzyjne">
+              <Section title={t('posPage.decisionRights')}>
                 <p className="text-sm text-ink-700 bg-amber-50/60 border border-amber-100 rounded-lg p-3">{selected.decision_rights}</p>
               </Section>
             )}
 
             {selected.requirements && selected.requirements.length > 0 && (
-              <Section title="Wymagania">
+              <Section title={t('posPage.requirements')}>
                 <div className="flex flex-wrap gap-1.5">
                   {selected.requirements.map((r) => <Badge key={r} variant="info">{r}</Badge>)}
                 </div>
@@ -233,9 +235,9 @@ export function PositionsPage({ data, role, onRefresh }: PositionsPageProps) {
       />
       <ConfirmDialog
         open={!!deleting}
-        title="Usunąć stanowisko?"
-        message={`Czy na pewno chcesz usunąć stanowisko „${deleting?.title ?? ''}"? Tej operacji nie można cofnąć.`}
-        confirmLabel="Usuń"
+        title={t('confirm.deletePosition.title')}
+        message={t('confirm.deletePosition.msg', { name: deleting?.title ?? '' })}
+        confirmLabel={t('common.delete')}
         destructive
         loading={deleteLoading}
         onConfirm={handleDelete}

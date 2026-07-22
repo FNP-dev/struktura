@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Input, Select } from '../ui/Input';
+import { useLang } from '../../hooks/useLang';
 import type { DepartmentInput } from '../../lib/api';
 import type { DepartmentNode, EmployeeWithRelations } from '../../lib/types';
 
@@ -29,6 +30,7 @@ const EMPTY: DepartmentInput = {
 };
 
 export function DepartmentFormModal({ open, onClose, onSubmit, departments, employees, department, defaultParentId, loading }: DepartmentFormModalProps) {
+  const { t } = useLang();
   const [form, setForm] = useState<DepartmentInput>(EMPTY);
   const [error, setError] = useState<string | null>(null);
 
@@ -57,7 +59,7 @@ export function DepartmentFormModal({ open, onClose, onSubmit, departments, empl
   const handleSubmit = async () => {
     setError(null);
     if (!form.name.trim()) {
-      setError('Nazwa działu jest wymagana.');
+      setError(t('deptForm.err.name'));
       return;
     }
     const parent = form.parent_id ? departments.find((d) => d.id === form.parent_id) : null;
@@ -66,7 +68,7 @@ export function DepartmentFormModal({ open, onClose, onSubmit, departments, empl
       await onSubmit({ ...form, level });
       onClose();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Wystąpił błąd');
+      setError(e instanceof Error ? e.message : 'Error');
     }
   };
 
@@ -89,40 +91,40 @@ export function DepartmentFormModal({ open, onClose, onSubmit, departments, empl
       open={open}
       onClose={onClose}
       size="md"
-      title={department ? 'Edytuj jednostkę organizacyjną' : 'Nowa jednostka organizacyjna'}
+      title={department ? t('deptForm.title.edit') : t('deptForm.title.new')}
       subtitle={department?.name}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose} disabled={loading}>Anuluj</Button>
+          <Button variant="secondary" onClick={onClose} disabled={loading}>{t('common.cancel')}</Button>
           <Button variant="primary" onClick={handleSubmit} disabled={loading}>
-            {loading ? 'Zapisywanie…' : department ? 'Zapisz zmiany' : 'Dodaj'}
+            {loading ? t('deptForm.saving') : department ? t('deptForm.saveEdit') : t('deptForm.saveNew')}
           </Button>
         </>
       }
     >
       <div className="space-y-4">
         {error && <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">{error}</div>}
-        <Input label="Nazwa *" value={form.name} onChange={(e) => set('name', e.target.value)} placeholder="np. Produkcja" />
+        <Input label={t('deptForm.name')} value={form.name} onChange={(e) => set('name', e.target.value)} placeholder={t('deptForm.name.ph')} />
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Input label="Kod" value={form.code ?? ''} onChange={(e) => set('code', e.target.value || null)} placeholder="np. PROD" />
-          <Select label="Ikona" value={form.icon ?? 'building'} onChange={(e) => set('icon', e.target.value)}>
+          <Input label={t('deptForm.code')} value={form.code ?? ''} onChange={(e) => set('code', e.target.value || null)} placeholder={t('deptForm.code.ph')} />
+          <Select label={t('deptForm.icon')} value={form.icon ?? 'building'} onChange={(e) => set('icon', e.target.value)}>
             {ICON_OPTIONS.map((i) => <option key={i} value={i}>{i}</option>)}
           </Select>
         </div>
-        <Select label="Jednostka nadrzędna" value={form.parent_id ?? ''} onChange={(e) => set('parent_id', e.target.value || null)}>
-          <option value="">— (poziom główny)</option>
+        <Select label={t('deptForm.parent')} value={form.parent_id ?? ''} onChange={(e) => set('parent_id', e.target.value || null)}>
+          <option value="">{t('deptForm.parent.none')}</option>
           {flatNonSelf(department?.id).map((d) => (
             <option key={d.id} value={d.id}>{'— '.repeat(d.level)}{d.name}</option>
           ))}
         </Select>
-        <Select label="Kierownik" value={form.manager_id ?? ''} onChange={(e) => set('manager_id', e.target.value || null)}>
+        <Select label={t('deptForm.manager')} value={form.manager_id ?? ''} onChange={(e) => set('manager_id', e.target.value || null)}>
           <option value="">—</option>
           {employees.map((emp) => (
             <option key={emp.id} value={emp.id}>{emp.first_name} {emp.last_name}</option>
           ))}
         </Select>
         <div>
-          <label className="label">Opis</label>
+          <label className="label">{t('deptForm.description')}</label>
           <textarea className="input min-h-[60px] resize-y" value={form.description ?? ''} onChange={(e) => set('description', e.target.value || null)} />
         </div>
       </div>

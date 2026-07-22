@@ -3,6 +3,7 @@ import {
   FileText, BarChart3, Shield, LogOut, Target, type LucideIcon,
 } from 'lucide-react';
 import { cn } from '../../lib/utils';
+import { useLang } from '../../hooks/useLang';
 import type { AppRole } from '../../lib/supabase';
 
 export type PageKey =
@@ -22,61 +23,55 @@ export type PageKey =
 
 export interface NavItem {
   key: PageKey;
-  label: string;
+  labelKey: string;
   icon: LucideIcon;
   badge?: string;
-  children?: { key: PageKey; label: string }[];
+  children?: { key: PageKey; labelKey: string }[];
   requiredRole?: AppRole[];
 }
 
 export interface NavSection {
-  title: string;
+  titleKey: string;
   items: NavItem[];
 }
 
 export const NAV_SECTIONS: NavSection[] = [
   {
-    title: 'Główne',
-    items: [{ key: 'dashboard', label: 'Dashboard', icon: LayoutDashboard }],
+    titleKey: 'nav.main',
+    items: [{ key: 'dashboard', labelKey: 'nav.dashboard', icon: LayoutDashboard }],
   },
   {
-    title: 'Organizacja',
+    titleKey: 'nav.organization',
     items: [
-      { key: 'company', label: 'Firma', icon: Building2 },
+      { key: 'company', labelKey: 'nav.company', icon: Building2 },
       {
         key: 'structure',
-        label: 'Struktura organizacyjna',
+        labelKey: 'nav.structure',
         icon: Network,
         children: [
-          { key: 'board', label: 'Zarząd' },
-          { key: 'departments', label: 'Działy' },
-          { key: 'organigram', label: 'Organigram' },
+          { key: 'board', labelKey: 'nav.board' },
+          { key: 'departments', labelKey: 'nav.departments' },
+          { key: 'organigram', labelKey: 'nav.organigram' },
         ],
       },
-      { key: 'employees', label: 'Pracownicy', icon: Users },
-      { key: 'positions', label: 'Stanowiska', icon: Briefcase },
+      { key: 'employees', labelKey: 'nav.employees', icon: Users },
+      { key: 'positions', labelKey: 'nav.positions', icon: Briefcase },
     ],
   },
   {
-    title: 'Operacje',
+    titleKey: 'nav.operations',
     items: [
-      { key: 'processes', label: 'Procesy', icon: Workflow },
-      { key: 'performance', label: 'Oceny pracownicze', icon: Target },
-      { key: 'documents', label: 'Dokumenty', icon: FileText },
-      { key: 'reports', label: 'Raporty', icon: BarChart3 },
+      { key: 'processes', labelKey: 'nav.processes', icon: Workflow },
+      { key: 'performance', labelKey: 'nav.performance', icon: Target },
+      { key: 'documents', labelKey: 'nav.documents', icon: FileText },
+      { key: 'reports', labelKey: 'nav.reports', icon: BarChart3 },
     ],
   },
   {
-    title: 'System',
-    items: [{ key: 'admin', label: 'Administracja', icon: Shield, requiredRole: ['admin'] }],
+    titleKey: 'nav.system',
+    items: [{ key: 'admin', labelKey: 'nav.admin', icon: Shield, requiredRole: ['admin'] }],
   },
 ];
-
-const ROLE_LABELS: Record<AppRole, string> = {
-  admin: 'Administrator',
-  hr: 'HR',
-  employee: 'Pracownik',
-};
 
 const ROLE_COLORS: Record<AppRole, string> = {
   admin: 'bg-red-100 text-red-700',
@@ -107,6 +102,8 @@ export function Sidebar({
   displayName,
   onSignOut,
 }: SidebarProps) {
+  const { t } = useLang();
+
   const isActive = (item: NavItem): boolean => {
     if (item.key === current) return true;
     if (item.key === 'structure' && (current === 'board' || current === 'departments' || current === 'organigram')) {
@@ -122,7 +119,6 @@ export function Sidebar({
 
   return (
     <>
-      {/* Mobile overlay */}
       {mobileOpen && (
         <div className="fixed inset-0 z-30 bg-ink-950/40 lg:hidden" onClick={onMobileClose} />
       )}
@@ -133,7 +129,6 @@ export function Sidebar({
           mobileOpen ? 'translate-x-0' : '-translate-x-full lg:translate-x-0'
         )}
       >
-        {/* Brand */}
         <div className="flex items-center gap-2.5 px-4 h-16 border-b border-ink-100 shrink-0">
           <div className="flex h-9 w-9 items-center justify-center rounded-lg bg-gradient-to-br from-brand-400 to-brand-600 text-white font-bold shadow-sm shrink-0">
             {companyLogo ? (
@@ -144,11 +139,10 @@ export function Sidebar({
           </div>
           <div className="min-w-0">
             <p className="text-sm font-semibold text-ink-900 truncate">{companyName}</p>
-            <p className="text-[11px] text-ink-400 truncate">Struktura organizacyjna</p>
+            <p className="text-[11px] text-ink-400 truncate">{t('footer.tagline')}</p>
           </div>
         </div>
 
-        {/* Nav */}
         <nav className="flex-1 overflow-y-auto py-4 px-3 space-y-5">
           {NAV_SECTIONS.map((section) => {
             const visibleItems = section.items.filter((item) => {
@@ -157,8 +151,8 @@ export function Sidebar({
             });
             if (visibleItems.length === 0) return null;
             return (
-            <div key={section.title}>
-              <p className="px-3 mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-ink-400">{section.title}</p>
+            <div key={section.titleKey}>
+              <p className="px-3 mb-1.5 text-[11px] font-semibold uppercase tracking-wider text-ink-400">{t(section.titleKey)}</p>
               <div className="space-y-0.5">
                 {visibleItems.map((item) => {
                   const Icon = item.icon;
@@ -179,7 +173,7 @@ export function Sidebar({
                         )}
                       >
                         <Icon size={16} className={active ? 'text-brand-600' : 'text-ink-400'} />
-                        <span className="truncate text-left flex-1">{item.label}</span>
+                        <span className="truncate text-left flex-1">{t(item.labelKey)}</span>
                       </button>
                       {hasChildActive && item.children && (
                         <div className="mt-0.5 ml-7 space-y-0.5 border-l border-ink-100 pl-2.5">
@@ -192,7 +186,7 @@ export function Sidebar({
                                 current === c.key ? 'text-brand-700 bg-brand-50' : 'text-ink-500 hover:text-ink-800 hover:bg-ink-50'
                               )}
                             >
-                              {c.label}
+                              {t(c.labelKey)}
                             </button>
                           ))}
                         </div>
@@ -206,21 +200,20 @@ export function Sidebar({
           })}
         </nav>
 
-        {/* Footer — current user */}
         <div className="border-t border-ink-100 p-3 shrink-0">
           <div className="flex items-center gap-2 px-2 py-1.5 rounded-lg bg-ink-50">
             <div className={cn('flex h-7 w-7 items-center justify-center rounded-full text-xs font-semibold', role ? ROLE_COLORS[role] : 'bg-ink-200 text-ink-600')}>
               {(displayName?.[0] ?? '?').toUpperCase()}
             </div>
             <div className="min-w-0 flex-1">
-              <p className="text-xs font-medium text-ink-800 truncate">{displayName ?? 'Użytkownik'}</p>
-              <p className="text-[10px] text-ink-400 truncate">{role ? ROLE_LABELS[role] : '—'}</p>
+              <p className="text-xs font-medium text-ink-800 truncate">{displayName ?? t('role.employee')}</p>
+              <p className="text-[10px] text-ink-400 truncate">{role ? t(`role.${role}`) : '—'}</p>
             </div>
             <button
               onClick={onSignOut}
               className="shrink-0 rounded-md p-1.5 text-ink-400 hover:bg-ink-200 hover:text-ink-700 transition-colors"
-              title="Wyloguj"
-              aria-label="Wyloguj"
+              title={t('auth.signOut')}
+              aria-label={t('auth.signOut')}
             >
               <LogOut size={14} />
             </button>

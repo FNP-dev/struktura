@@ -1,4 +1,5 @@
 import { Building2, MapPin, Mail, Phone, Globe, Calendar, Briefcase, Users } from 'lucide-react';
+import { useLang } from '../hooks/useLang';
 import { Card, CardHeader } from '../components/ui/Card';
 import { Badge } from '../components/ui/Badge';
 import { Avatar } from '../components/ui/Avatar';
@@ -12,8 +13,9 @@ interface CompanyPageProps {
 }
 
 export function CompanyPage({ data, onSelectEmployee }: CompanyPageProps) {
+  const { t } = useLang();
   const { company, locations, employees, departments } = data;
-  if (!company) return <p className="text-sm text-ink-500">Brak danych firmy.</p>;
+  if (!company) return <p className="text-sm text-ink-500">{t('company.noData')}</p>;
 
   const boardMembers = employees.filter((e) => e.is_board_member);
 
@@ -38,11 +40,11 @@ export function CompanyPage({ data, onSelectEmployee }: CompanyPageProps) {
                 )}
                 {company.founded_year && (
                   <Badge variant="brand" className="bg-white/10 text-white border border-white/10">
-                    <Calendar size={12} /> Założono {company.founded_year}
+                    <Calendar size={12} /> {t('company.founded', { year: company.founded_year })}
                   </Badge>
                 )}
                 <Badge variant="brand" className="bg-white/10 text-white border border-white/10">
-                  <Users size={12} /> {employees.length} pracowników
+                  <Users size={12} /> {t('company.employees', { count: employees.length })}
                 </Badge>
               </div>
             </div>
@@ -50,17 +52,17 @@ export function CompanyPage({ data, onSelectEmployee }: CompanyPageProps) {
         </div>
 
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <InfoRow icon={<Mail size={16} />} label="Email" value={company.email} href={company.email ? `mailto:${company.email}` : undefined} />
-          <InfoRow icon={<Phone size={16} />} label="Telefon" value={company.phone} href={company.phone ? `tel:${company.phone}` : undefined} />
-          <InfoRow icon={<Globe size={16} />} label="Strona WWW" value={company.website} href={company.website ?? undefined} />
-          <InfoRow icon={<MapPin size={16} />} label="Adres centrali" value={company.address} />
+          <InfoRow icon={<Mail size={16} />} label={t('company.email')} value={company.email} href={company.email ? `mailto:${company.email}` : undefined} />
+          <InfoRow icon={<Phone size={16} />} label={t('company.phone')} value={company.phone} href={company.phone ? `tel:${company.phone}` : undefined} />
+          <InfoRow icon={<Globe size={16} />} label={t('company.website')} value={company.website} href={company.website ?? undefined} />
+          <InfoRow icon={<MapPin size={16} />} label={t('company.address')} value={company.address} />
         </div>
       </Card>
 
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Locations */}
         <Card className="lg:col-span-2">
-          <CardHeader title="Lokalizacje oddziałów" subtitle={`${locations.length} lokalizacji`} />
+          <CardHeader title={t('company.locations')} subtitle={t('company.locationsCount', { count: locations.length })} />
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             {locations.map((loc) => (
               <div key={loc.id} className="rounded-xl border border-ink-100 p-4">
@@ -71,7 +73,7 @@ export function CompanyPage({ data, onSelectEmployee }: CompanyPageProps) {
                     </span>
                     <h4 className="text-sm font-semibold text-ink-900">{loc.name}</h4>
                   </div>
-                  {loc.is_headquarters && <Badge variant="brand" size="sm">Centrala</Badge>}
+                  {loc.is_headquarters && <Badge variant="brand" size="sm">{t('badge.HQ')}</Badge>}
                 </div>
                 <div className="space-y-1 text-xs text-ink-500">
                   <p className="flex items-start gap-1.5"><MapPin size={12} className="mt-0.5 shrink-0" /> {loc.address}</p>
@@ -85,7 +87,7 @@ export function CompanyPage({ data, onSelectEmployee }: CompanyPageProps) {
 
         {/* Board snapshot */}
         <Card>
-          <CardHeader title="Zarząd" subtitle={`${boardMembers.length} członków`} />
+          <CardHeader title={t('company.board')} subtitle={t('company.boardMembers', { count: boardMembers.length })} />
           <div className="space-y-2">
             {boardMembers.map((m) => (
               <button
@@ -108,19 +110,19 @@ export function CompanyPage({ data, onSelectEmployee }: CompanyPageProps) {
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
         <Card className="text-center py-6">
           <p className="text-3xl font-bold text-brand-600">{employees.length}</p>
-          <p className="text-xs text-ink-500 mt-1">Pracowników</p>
+          <p className="text-xs text-ink-500 mt-1">{t('company.statEmployees')}</p>
         </Card>
         <Card className="text-center py-6">
           <p className="text-3xl font-bold text-sky-600">{departments.length}</p>
-          <p className="text-xs text-ink-500 mt-1">Jednostek org.</p>
+          <p className="text-xs text-ink-500 mt-1">{t('company.statDepartments')}</p>
         </Card>
         <Card className="text-center py-6">
           <p className="text-3xl font-bold text-violet-600">{locations.length}</p>
-          <p className="text-xs text-ink-500 mt-1">Lokalizacji</p>
+          <p className="text-xs text-ink-500 mt-1">{t('company.statLocations')}</p>
         </Card>
         <Card className="text-center py-6">
           <p className="text-3xl font-bold text-emerald-600">{new Date().getFullYear() - (company.founded_year ?? new Date().getFullYear())}</p>
-          <p className="text-xs text-ink-500 mt-1">Lat działalności</p>
+          <p className="text-xs text-ink-500 mt-1">{t('company.statYears')}</p>
         </Card>
       </div>
     </div>

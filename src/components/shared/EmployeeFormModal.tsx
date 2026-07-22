@@ -2,8 +2,8 @@ import { useEffect, useState } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Input, Select } from '../ui/Input';
-import type { OrgSnapshot } from '../../lib/api';
-import type { EmployeeInput } from '../../lib/api';
+import { useLang } from '../../hooks/useLang';
+import type { OrgSnapshot, EmployeeInput } from '../../lib/api';
 import type { EmployeeWithRelations } from '../../lib/types';
 
 interface EmployeeFormModalProps {
@@ -37,6 +37,7 @@ const EMPTY: EmployeeInput = {
 };
 
 export function EmployeeFormModal({ open, onClose, onSubmit, data, employee, loading, role }: EmployeeFormModalProps) {
+  const { t } = useLang();
   const [form, setForm] = useState<EmployeeInput>(EMPTY);
   const [competenciesText, setCompetenciesText] = useState('');
   const [specializationsText, setSpecializationsText] = useState('');
@@ -81,7 +82,7 @@ export function EmployeeFormModal({ open, onClose, onSubmit, data, employee, loa
   const handleSubmit = async () => {
     setError(null);
     if (!form.first_name.trim() || !form.last_name.trim()) {
-      setError('Imię i nazwisko są wymagane.');
+      setError(t('empForm.err.nameRequired'));
       return;
     }
     const competencies = competenciesText.split(',').map((s) => s.trim()).filter(Boolean);
@@ -94,7 +95,7 @@ export function EmployeeFormModal({ open, onClose, onSubmit, data, employee, loa
       });
       onClose();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Wystąpił błąd');
+      setError(e instanceof Error ? e.message : t('error.generic'));
     }
   };
 
@@ -105,13 +106,13 @@ export function EmployeeFormModal({ open, onClose, onSubmit, data, employee, loa
       open={open}
       onClose={onClose}
       size="lg"
-      title={employee ? 'Edytuj pracownika' : 'Nowy pracownik'}
-      subtitle={employee ? `${employee.first_name} ${employee.last_name}` : 'Dodaj nowego pracownika do katalogu'}
+      title={employee ? t('empForm.title.edit') : t('empForm.title.new')}
+      subtitle={employee ? `${employee.first_name} ${employee.last_name}` : t('empForm.subtitle.new')}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose} disabled={loading}>Anuluj</Button>
+          <Button variant="secondary" onClick={onClose} disabled={loading}>{t('common.cancel')}</Button>
           <Button variant="primary" onClick={handleSubmit} disabled={loading}>
-            {loading ? 'Zapisywanie…' : employee ? 'Zapisz zmiany' : 'Dodaj pracownika'}
+            {loading ? t('empForm.saving') : employee ? t('empForm.saveEdit') : t('empForm.saveNew')}
           </Button>
         </>
       }
@@ -121,44 +122,44 @@ export function EmployeeFormModal({ open, onClose, onSubmit, data, employee, loa
           <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">{error}</div>
         )}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Input label="Imię *" value={form.first_name} onChange={(e) => set('first_name', e.target.value)} />
-          <Input label="Nazwisko *" value={form.last_name} onChange={(e) => set('last_name', e.target.value)} />
+          <Input label={t('empForm.firstName')} value={form.first_name} onChange={(e) => set('first_name', e.target.value)} />
+          <Input label={t('empForm.lastName')} value={form.last_name} onChange={(e) => set('last_name', e.target.value)} />
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Input label="Email" type="email" value={form.email ?? ''} onChange={(e) => set('email', e.target.value || null)} />
-          <Input label="Telefon" value={form.phone ?? ''} onChange={(e) => set('phone', e.target.value || null)} />
+          <Input label={t('empForm.email')} type="email" value={form.email ?? ''} onChange={(e) => set('email', e.target.value || null)} />
+          <Input label={t('empForm.phone')} value={form.phone ?? ''} onChange={(e) => set('phone', e.target.value || null)} />
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Select label="Stanowisko" value={form.position_id ?? ''} onChange={(e) => set('position_id', e.target.value || null)}>
+          <Select label={t('empForm.position')} value={form.position_id ?? ''} onChange={(e) => set('position_id', e.target.value || null)}>
             <option value="">—</option>
             {data.positions.map((p) => <option key={p.id} value={p.id}>{p.title}</option>)}
           </Select>
-          <Select label="Dział" value={form.department_id ?? ''} onChange={(e) => set('department_id', e.target.value || null)}>
+          <Select label={t('empForm.department')} value={form.department_id ?? ''} onChange={(e) => set('department_id', e.target.value || null)}>
             <option value="">—</option>
             {data.departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
           </Select>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Select label="Przełożony" value={form.manager_id ?? ''} onChange={(e) => set('manager_id', e.target.value || null)}>
+          <Select label={t('empForm.manager')} value={form.manager_id ?? ''} onChange={(e) => set('manager_id', e.target.value || null)}>
             <option value="">—</option>
             {managers.map((m) => <option key={m.id} value={m.id}>{m.first_name} {m.last_name}</option>)}
           </Select>
-          <Select label="Lokalizacja" value={form.location_id ?? ''} onChange={(e) => set('location_id', e.target.value || null)}>
+          <Select label={t('empForm.location')} value={form.location_id ?? ''} onChange={(e) => set('location_id', e.target.value || null)}>
             <option value="">—</option>
             {data.locations.map((l) => <option key={l.id} value={l.id}>{l.name}</option>)}
           </Select>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Input label="Data zatrudnienia" type="date" value={form.hire_date ?? ''} onChange={(e) => set('hire_date', e.target.value || null)} />
-          <Select label="Status" value={form.status} onChange={(e) => set('status', e.target.value as EmployeeInput['status'])}>
-            <option value="active">Aktywny</option>
-            <option value="on_leave">Na urlopie</option>
-            <option value="terminated">Zatrzymany</option>
+          <Input label={t('empForm.hireDate')} type="date" value={form.hire_date ?? ''} onChange={(e) => set('hire_date', e.target.value || null)} />
+          <Select label={t('empForm.status')} value={form.status} onChange={(e) => set('status', e.target.value as EmployeeInput['status'])}>
+            <option value="active">{t('badge.status.active')}</option>
+            <option value="on_leave">{t('badge.status.on_leave')}</option>
+            <option value="terminated">{t('badge.status.terminated')}</option>
           </Select>
         </div>
-        <Input label="URL awatara" value={form.avatar_url ?? ''} onChange={(e) => set('avatar_url', e.target.value || null)} placeholder="https://…" />
-        <Input label="Kompetencje (oddzielone przecinkami)" value={competenciesText} onChange={(e) => setCompetenciesText(e.target.value)} placeholder="np. Zarządzanie, Excel, Prawo" />
-        <Input label="Specjalizacje (oddzielone przecinkami)" value={specializationsText} onChange={(e) => setSpecializationsText(e.target.value)} placeholder="np. Audyt, Budżetowanie" />
+        <Input label={t('empForm.avatarUrl')} value={form.avatar_url ?? ''} onChange={(e) => set('avatar_url', e.target.value || null)} placeholder="https://…" />
+        <Input label={t('empForm.competencies')} value={competenciesText} onChange={(e) => setCompetenciesText(e.target.value)} placeholder={t('empForm.competenciesPh')} />
+        <Input label={t('empForm.specializations')} value={specializationsText} onChange={(e) => setSpecializationsText(e.target.value)} placeholder={t('empForm.specializationsPh')} />
         <label className="flex items-center gap-2.5 cursor-pointer select-none">
           <input
             type="checkbox"
@@ -166,18 +167,18 @@ export function EmployeeFormModal({ open, onClose, onSubmit, data, employee, loa
             onChange={(e) => set('is_board_member', e.target.checked)}
             className="h-4 w-4 rounded border-ink-300 text-brand-600 focus:ring-brand-200"
           />
-          <span className="text-sm text-ink-700">Członek zarządu</span>
+          <span className="text-sm text-ink-700">{t('empForm.isBoardMember')}</span>
         </label>
 
         {(role === 'admin' || role === 'hr') && (
           <div className="rounded-xl border border-amber-200 bg-amber-50/40 p-4 space-y-3">
             <div className="flex items-center gap-2 text-amber-700">
-              <span className="text-xs font-semibold uppercase tracking-wide">Dane HR</span>
+              <span className="text-xs font-semibold uppercase tracking-wide">{t('empForm.hrData')}</span>
             </div>
-            <Input label="Miesięczne wynagrodzenie brutto (PLN)" type="number" value={form.salary ?? ''} onChange={(e) => set('salary', e.target.value ? Number(e.target.value) : null)} />
+            <Input label={t('empForm.salary')} type="number" value={form.salary ?? ''} onChange={(e) => set('salary', e.target.value ? Number(e.target.value) : null)} />
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-              <Input label="Wykorzystany urlop (dni)" type="number" min={0} value={form.leave_used_days ?? 0} onChange={(e) => set('leave_used_days', e.target.value ? Number(e.target.value) : 0)} />
-              <Input label="Dni na zwolnieniu lekarskim (L4)" type="number" min={0} value={form.sick_days ?? 0} onChange={(e) => set('sick_days', e.target.value ? Number(e.target.value) : 0)} />
+              <Input label={t('empForm.leaveDays')} type="number" min={0} value={form.leave_used_days ?? 0} onChange={(e) => set('leave_used_days', e.target.value ? Number(e.target.value) : 0)} />
+              <Input label={t('empForm.sickDays')} type="number" min={0} value={form.sick_days ?? 0} onChange={(e) => set('sick_days', e.target.value ? Number(e.target.value) : 0)} />
             </div>
           </div>
         )}

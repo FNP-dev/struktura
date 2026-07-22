@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Input, Select } from '../ui/Input';
+import { useLang } from '../../hooks/useLang';
 import type { OrgSnapshot, DocumentInput } from '../../lib/api';
 import type { DocumentItem } from '../../lib/types';
 
@@ -25,16 +26,17 @@ const EMPTY: DocumentInput = {
   status: 'active',
 };
 
-const TYPES: { value: DocumentInput['type']; label: string }[] = [
-  { value: 'regulation', label: 'Regulamin' },
-  { value: 'procedure', label: 'Procedura' },
-  { value: 'policy', label: 'Polityka' },
-  { value: 'instruction', label: 'Instrukcja' },
+const TYPES: { value: DocumentInput['type'] }[] = [
+  { value: 'regulation' },
+  { value: 'procedure' },
+  { value: 'policy' },
+  { value: 'instruction' },
 ];
 
 const STATUSES = ['active', 'draft', 'archived'];
 
 export function DocumentFormModal({ open, onClose, onSubmit, data, document: doc, loading }: DocumentFormModalProps) {
+  const { t } = useLang();
   const [form, setForm] = useState<DocumentInput>(EMPTY);
   const [error, setError] = useState<string | null>(null);
 
@@ -64,14 +66,14 @@ export function DocumentFormModal({ open, onClose, onSubmit, data, document: doc
   const handleSubmit = async () => {
     setError(null);
     if (!form.title.trim()) {
-      setError('Tytuł dokumentu jest wymagany.');
+      setError(t('docForm.err.titleRequired'));
       return;
     }
     try {
       await onSubmit(form);
       onClose();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Wystąpił błąd');
+      setError(e instanceof Error ? e.message : t('error.generic'));
     }
   };
 
@@ -80,13 +82,13 @@ export function DocumentFormModal({ open, onClose, onSubmit, data, document: doc
       open={open}
       onClose={onClose}
       size="md"
-      title={doc ? 'Edytuj dokument' : 'Nowy dokument'}
+      title={doc ? t('docForm.title.edit') : t('docForm.title.new')}
       subtitle={doc?.title}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose} disabled={loading}>Anuluj</Button>
+          <Button variant="secondary" onClick={onClose} disabled={loading}>{t('common.cancel')}</Button>
           <Button variant="primary" onClick={handleSubmit} disabled={loading}>
-            {loading ? 'Zapisywanie…' : doc ? 'Zapisz zmiany' : 'Dodaj dokument'}
+            {loading ? t('docForm.saving') : doc ? t('docForm.saveEdit') : t('docForm.saveNew')}
           </Button>
         </>
       }
@@ -95,9 +97,9 @@ export function DocumentFormModal({ open, onClose, onSubmit, data, document: doc
         {error && (
           <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">{error}</div>
         )}
-        <Input label="Tytuł *" value={form.title} onChange={(e) => set('title', e.target.value)} />
+        <Input label={t('docForm.title')} value={form.title} onChange={(e) => set('title', e.target.value)} />
         <div>
-          <label className="label">Opis</label>
+          <label className="label">{t('docForm.description')}</label>
           <textarea
             className="input min-h-[70px] resize-y"
             value={form.description ?? ''}
@@ -105,23 +107,23 @@ export function DocumentFormModal({ open, onClose, onSubmit, data, document: doc
           />
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Select label="Typ" value={form.type} onChange={(e) => set('type', e.target.value as DocumentInput['type'])}>
-            {TYPES.map((t) => <option key={t.value} value={t.value}>{t.label}</option>)}
+          <Select label={t('docForm.type')} value={form.type} onChange={(e) => set('type', e.target.value as DocumentInput['type'])}>
+            {TYPES.map((tp) => <option key={tp.value} value={tp.value}>{t(`badge.docType.${tp.value}`)}</option>)}
           </Select>
-          <Select label="Status" value={form.status ?? ''} onChange={(e) => set('status', e.target.value)}>
-            {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+          <Select label={t('docForm.status')} value={form.status ?? ''} onChange={(e) => set('status', e.target.value)}>
+            {STATUSES.map((s) => <option key={s} value={s}>{t(`badge.docStatus.${s}`)}</option>)}
           </Select>
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Select label="Dział" value={form.department_id ?? ''} onChange={(e) => set('department_id', e.target.value || null)}>
-            <option value="">Firma (ogólny)</option>
+          <Select label={t('docForm.department')} value={form.department_id ?? ''} onChange={(e) => set('department_id', e.target.value || null)}>
+            <option value="">{t('docForm.departmentGeneral')}</option>
             {data.departments.map((d) => <option key={d.id} value={d.id}>{d.name}</option>)}
           </Select>
-          <Input label="Wersja" value={form.version ?? ''} onChange={(e) => set('version', e.target.value || null)} placeholder="1.0" />
+          <Input label={t('docForm.version')} value={form.version ?? ''} onChange={(e) => set('version', e.target.value || null)} placeholder="1.0" />
         </div>
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <Input label="Data wejścia w życie" type="date" value={form.effective_date ?? ''} onChange={(e) => set('effective_date', e.target.value || null)} />
-          <Input label="URL pliku" value={form.file_url ?? ''} onChange={(e) => set('file_url', e.target.value || null)} placeholder="https://…" />
+          <Input label={t('docForm.effectiveDate')} type="date" value={form.effective_date ?? ''} onChange={(e) => set('effective_date', e.target.value || null)} />
+          <Input label={t('docForm.fileUrl')} value={form.file_url ?? ''} onChange={(e) => set('file_url', e.target.value || null)} placeholder="https://…" />
         </div>
       </div>
     </Modal>

@@ -3,6 +3,7 @@ import { Avatar } from '../ui/Avatar';
 import { Badge } from '../ui/Badge';
 import { EmployeeStatusBadge } from './badges';
 import { fullName, tenureYears } from '../../lib/format';
+import { useLang } from '../../hooks/useLang';
 import type { EmployeeWithRelations } from '../../lib/types';
 import { cn } from '../../lib/utils';
 
@@ -14,6 +15,7 @@ interface EmployeeCardProps {
 }
 
 export function EmployeeCard({ employee, onClick, showManager = true, className }: EmployeeCardProps) {
+  const { t } = useLang();
   return (
     <button
       onClick={() => onClick?.(employee)}
@@ -28,7 +30,7 @@ export function EmployeeCard({ employee, onClick, showManager = true, className 
           <div className="flex items-center gap-2">
             <h4 className="font-semibold text-ink-900 truncate">{fullName(employee)}</h4>
             {employee.is_board_member && (
-              <Badge variant="brand" size="sm">Zarząd</Badge>
+              <Badge variant="brand" size="sm">{t('badge.board')}</Badge>
             )}
           </div>
           <p className="text-sm text-ink-600 truncate">{employee.position?.title ?? '—'}</p>
@@ -64,11 +66,11 @@ export function EmployeeCard({ employee, onClick, showManager = true, className 
         {showManager && employee.manager && (
           <span className="flex items-center gap-1.5 truncate">
             <Building2 size={12} className="shrink-0 text-ink-400" />
-            Przełożony: {employee.manager.first_name} {employee.manager.last_name}
+            {t('employee.supervisor', { name: `${employee.manager.first_name} ${employee.manager.last_name}` })}
           </span>
         )}
         {employee.hire_date && (
-          <span className="text-ink-400">Zatrudniony: {tenureYears(employee.hire_date)}</span>
+          <span className="text-ink-400">{t('employee.hired', { tenure: tenureYears(employee.hire_date) })}</span>
         )}
       </div>
 

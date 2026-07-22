@@ -2,6 +2,7 @@ import { useEffect, useState } from 'react';
 import { Modal } from '../ui/Modal';
 import { Button } from '../ui/Button';
 import { Input, Select } from '../ui/Input';
+import { useLang } from '../../hooks/useLang';
 import type { OrgSnapshot, ProcessInput } from '../../lib/api';
 import type { ProcessWithRelations } from '../../lib/types';
 
@@ -28,6 +29,7 @@ const PRIORITIES = ['critical', 'high', 'medium', 'low'];
 const STATUSES = ['active', 'draft', 'archived'];
 
 export function ProcessFormModal({ open, onClose, onSubmit, data, process, loading }: ProcessFormModalProps) {
+  const { t } = useLang();
   const [form, setForm] = useState<ProcessInput>(EMPTY);
   const [error, setError] = useState<string | null>(null);
 
@@ -55,14 +57,14 @@ export function ProcessFormModal({ open, onClose, onSubmit, data, process, loadi
   const handleSubmit = async () => {
     setError(null);
     if (!form.name.trim()) {
-      setError('Nazwa procesu jest wymagana.');
+      setError(t('procForm.err.nameRequired'));
       return;
     }
     try {
       await onSubmit(form);
       onClose();
     } catch (e) {
-      setError(e instanceof Error ? e.message : 'Wystąpił błąd');
+      setError(e instanceof Error ? e.message : t('error.generic'));
     }
   };
 
@@ -71,13 +73,13 @@ export function ProcessFormModal({ open, onClose, onSubmit, data, process, loadi
       open={open}
       onClose={onClose}
       size="md"
-      title={process ? 'Edytuj proces' : 'Nowy proces'}
+      title={process ? t('procForm.title.edit') : t('procForm.title.new')}
       subtitle={process?.name}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose} disabled={loading}>Anuluj</Button>
+          <Button variant="secondary" onClick={onClose} disabled={loading}>{t('common.cancel')}</Button>
           <Button variant="primary" onClick={handleSubmit} disabled={loading}>
-            {loading ? 'Zapisywanie…' : process ? 'Zapisz zmiany' : 'Dodaj proces'}
+            {loading ? t('procForm.saving') : process ? t('procForm.saveEdit') : t('procForm.saveNew')}
           </Button>
         </>
       }
@@ -86,30 +88,30 @@ export function ProcessFormModal({ open, onClose, onSubmit, data, process, loadi
         {error && (
           <div className="rounded-lg bg-red-50 border border-red-200 px-3 py-2 text-sm text-red-700">{error}</div>
         )}
-        <Input label="Nazwa procesu *" value={form.name} onChange={(e) => set('name', e.target.value)} />
+        <Input label={t('procForm.name')} value={form.name} onChange={(e) => set('name', e.target.value)} />
         <div>
-          <label className="label">Opis</label>
+          <label className="label">{t('procForm.description')}</label>
           <textarea
             className="input min-h-[80px] resize-y"
             value={form.description ?? ''}
             onChange={(e) => set('description', e.target.value || null)}
           />
         </div>
-        <Select label="Właściciel procesu" value={form.owner_id ?? ''} onChange={(e) => set('owner_id', e.target.value || null)}>
+        <Select label={t('procForm.owner')} value={form.owner_id ?? ''} onChange={(e) => set('owner_id', e.target.value || null)}>
           <option value="">—</option>
           {data.employees.map((emp) => (
             <option key={emp.id} value={emp.id}>{emp.first_name} {emp.last_name}</option>
           ))}
         </Select>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-3">
-          <Select label="Kategoria" value={form.category ?? ''} onChange={(e) => set('category', e.target.value)}>
-            {CATEGORIES.map((c) => <option key={c} value={c}>{c}</option>)}
+          <Select label={t('procForm.category')} value={form.category ?? ''} onChange={(e) => set('category', e.target.value)}>
+            {CATEGORIES.map((c) => <option key={c} value={c}>{t(`badge.category.${c}`)}</option>)}
           </Select>
-          <Select label="Priorytet" value={form.priority ?? ''} onChange={(e) => set('priority', e.target.value)}>
-            {PRIORITIES.map((p) => <option key={p} value={p}>{p}</option>)}
+          <Select label={t('procForm.priority')} value={form.priority ?? ''} onChange={(e) => set('priority', e.target.value)}>
+            {PRIORITIES.map((p) => <option key={p} value={p}>{t(`badge.priority.${p}`)}</option>)}
           </Select>
-          <Select label="Status" value={form.status ?? ''} onChange={(e) => set('status', e.target.value)}>
-            {STATUSES.map((s) => <option key={s} value={s}>{s}</option>)}
+          <Select label={t('procForm.status')} value={form.status ?? ''} onChange={(e) => set('status', e.target.value)}>
+            {STATUSES.map((s) => <option key={s} value={s}>{t(`badge.docStatus.${s}`)}</option>)}
           </Select>
         </div>
       </div>

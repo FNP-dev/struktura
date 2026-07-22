@@ -1,4 +1,5 @@
 import { Crown, Mail, Phone, ChevronRight } from 'lucide-react';
+import { useLang } from '../hooks/useLang';
 import { Card } from '../components/ui/Card';
 import { Avatar } from '../components/ui/Avatar';
 import { Badge } from '../components/ui/Badge';
@@ -13,6 +14,7 @@ interface BoardPageProps {
 }
 
 export function BoardPage({ data, onSelectEmployee }: BoardPageProps) {
+  const { t } = useLang();
   const boardMembers = data.employees.filter((e) => e.is_board_member);
 
   return (
@@ -23,8 +25,8 @@ export function BoardPage({ data, onSelectEmployee }: BoardPageProps) {
             <Crown size={20} />
           </span>
           <div>
-            <h2 className="text-lg font-semibold text-ink-900">Zarząd</h2>
-            <p className="text-sm text-ink-500">Najwyższy organ kierowniczy — {boardMembers.length} członków</p>
+            <h2 className="text-lg font-semibold text-ink-900">{t('board.title')}</h2>
+            <p className="text-sm text-ink-500">{t('board.subtitle', { count: boardMembers.length })}</p>
           </div>
         </div>
       </Card>
@@ -65,16 +67,16 @@ export function BoardPage({ data, onSelectEmployee }: BoardPageProps) {
                 </span>
               )}
               <span className="flex items-center gap-1.5 text-ink-600">
-                <ChevronRight size={12} className="text-ink-400 shrink-0" /> Od {formatDate(m.hire_date)}
+                <ChevronRight size={12} className="text-ink-400 shrink-0" /> {t('board.since', { date: formatDate(m.hire_date) })}
               </span>
               <span className="flex items-center gap-1.5 text-ink-600">
-                <Crown size={12} className="text-ink-400 shrink-0" /> {tenureYears(m.hire_date)}
+                <Crown size={12} className="text-ink-400 shrink-0" /> {t('board.tenure', { tenure: tenureYears(m.hire_date) })}
               </span>
             </div>
 
             {m.position?.responsibilities && m.position.responsibilities.length > 0 && (
               <div className="pt-3 border-t border-ink-100">
-                <p className="text-xs font-semibold uppercase tracking-wide text-ink-500 mb-2">Kluczowe odpowiedzialności</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-ink-500 mb-2">{t('board.responsibilities')}</p>
                 <ul className="space-y-1">
                   {m.position.responsibilities.slice(0, 3).map((r, i) => (
                     <li key={i} className="flex items-start gap-2 text-sm text-ink-700">
@@ -88,7 +90,7 @@ export function BoardPage({ data, onSelectEmployee }: BoardPageProps) {
 
             {m.position?.decision_rights && (
               <div className="rounded-lg bg-amber-50/60 border border-amber-100 p-3">
-                <p className="text-xs font-semibold text-amber-700 mb-0.5">Uprawnienia decyzyjne</p>
+                <p className="text-xs font-semibold text-amber-700 mb-0.5">{t('board.decisionRights')}</p>
                 <p className="text-xs text-ink-700">{m.position.decision_rights}</p>
               </div>
             )}

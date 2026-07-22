@@ -14,6 +14,7 @@ import type { OrgSnapshot, ProcessInput } from '../lib/api';
 import { createProcess, updateProcess, deleteProcess } from '../lib/api';
 import type { EmployeeWithRelations, ProcessWithRelations } from '../lib/types';
 import { can } from '../hooks/useAuth';
+import { useLang } from '../hooks/useLang';
 
 interface ProcessesPageProps {
   data: OrgSnapshot;
@@ -24,6 +25,7 @@ interface ProcessesPageProps {
 
 export function ProcessesPage({ data, onSelectEmployee, role, onRefresh }: ProcessesPageProps) {
   const { processes } = data;
+  const { t } = useLang();
   const [query, setQuery] = useState('');
   const [categoryFilter, setCategoryFilter] = useState('all');
   const [priorityFilter, setPriorityFilter] = useState('all');
@@ -57,7 +59,7 @@ export function ProcessesPage({ data, onSelectEmployee, role, onRefresh }: Proce
       setDeleting(null);
       onRefresh();
     } catch (e) {
-      alert(e instanceof Error ? e.message : 'Nie udało się usunąć');
+      alert(e instanceof Error ? e.message : t('error.deleteFailed'));
     } finally { setDeleteLoading(false); }
   };
 
@@ -80,41 +82,41 @@ export function ProcessesPage({ data, onSelectEmployee, role, onRefresh }: Proce
           <div className="flex flex-col sm:flex-row gap-3">
             <div className="relative flex-1">
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-400" />
-              <input className="input pl-9" placeholder="Szukaj procesu…" value={query} onChange={(e) => setQuery(e.target.value)} />
+              <input className="input pl-9" placeholder={t('procPage.searchPh')} value={query} onChange={(e) => setQuery(e.target.value)} />
               {query && <button onClick={() => setQuery('')} className="absolute right-3 top-1/2 -translate-y-1/2 text-ink-400 hover:text-ink-600"><X size={14} /></button>}
             </div>
             {canWrite && (
-              <Button variant="primary" onClick={openCreate}><Plus size={16} /> Dodaj proces</Button>
+              <Button variant="primary" onClick={openCreate}><Plus size={16} /> {t('procPage.addProcess')}</Button>
             )}
           </div>
           <div className="grid grid-cols-1 sm:grid-cols-2 gap-3">
             <Select value={categoryFilter} onChange={(e) => setCategoryFilter(e.target.value)}>
-              <option value="all">Wszystkie kategorie</option>
+              <option value="all">{t('procPage.filterCategoryAll')}</option>
               {categories.map((c) => <option key={c} value={c}>{c}</option>)}
             </Select>
             <Select value={priorityFilter} onChange={(e) => setPriorityFilter(e.target.value)}>
-              <option value="all">Wszystkie priorytety</option>
-              <option value="critical">Krytyczny</option>
-              <option value="high">Wysoki</option>
-              <option value="medium">Średni</option>
-              <option value="low">Niski</option>
+              <option value="all">{t('procPage.filterPriorityAll')}</option>
+              <option value="critical">{t('badge.priority.critical')}</option>
+              <option value="high">{t('badge.priority.high')}</option>
+              <option value="medium">{t('badge.priority.medium')}</option>
+              <option value="low">{t('badge.priority.low')}</option>
             </Select>
           </div>
         </div>
       </Card>
 
       {filtered.length === 0 ? (
-        <Card><EmptyState title="Brak procesów" description="Nie znaleziono procesów spełniających kryteria." icon={<Workflow size={22} />} /></Card>
+        <Card><EmptyState title={t('procPage.empty.title')} description={t('procPage.empty.desc')} icon={<Workflow size={22} />} /></Card>
       ) : (
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-4">
           {filtered.map((p: ProcessWithRelations) => (
             <Card key={p.id} className="flex flex-col gap-4 relative group">
               {canWrite && canDelete && (
                 <div className="absolute top-3 right-3 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={() => openEdit(p)} className="rounded-md bg-white/90 hover:bg-white p-1.5 text-ink-600 hover:text-brand-600 shadow-sm border border-ink-100" title="Edytuj">
+                  <button onClick={() => openEdit(p)} className="rounded-md bg-white/90 hover:bg-white p-1.5 text-ink-600 hover:text-brand-600 shadow-sm border border-ink-100" title={t('common.edit')}>
                     <Pencil size={13} />
                   </button>
-                  <button onClick={() => setDeleting(p)} className="rounded-md bg-white/90 hover:bg-white p-1.5 text-ink-600 hover:text-red-600 shadow-sm border border-ink-100" title="Usuń">
+                  <button onClick={() => setDeleting(p)} className="rounded-md bg-white/90 hover:bg-white p-1.5 text-ink-600 hover:text-red-600 shadow-sm border border-ink-100" title={t('common.delete')}>
                     <Trash2 size={13} />
                   </button>
                 </div>
@@ -141,7 +143,7 @@ export function ProcessesPage({ data, onSelectEmployee, role, onRefresh }: Proce
                 >
                   <Avatar src={p.owner.avatar_url} first={p.owner.first_name} last={p.owner.last_name} size="sm" />
                   <div className="min-w-0 flex-1">
-                    <p className="text-xs text-ink-400">Właściciel procesu</p>
+                    <p className="text-xs text-ink-400">{t('procPage.owner')}</p>
                     <p className="text-sm font-medium text-ink-800 truncate">{fullName({ first_name: p.owner.first_name, last_name: p.owner.last_name })}</p>
                   </div>
                 </button>
@@ -150,7 +152,7 @@ export function ProcessesPage({ data, onSelectEmployee, role, onRefresh }: Proce
               {p.departments && p.departments.length > 0 && (
                 <div className="pt-3 border-t border-ink-100">
                   <p className="text-xs font-semibold uppercase tracking-wide text-ink-500 mb-2 flex items-center gap-1.5">
-                    <Users size={12} /> Powiązane działy
+                    <Users size={12} /> {t('procPage.relatedDepts')}
                   </p>
                   <div className="space-y-1.5">
                     {p.departments.map((d) => (
@@ -180,9 +182,9 @@ export function ProcessesPage({ data, onSelectEmployee, role, onRefresh }: Proce
       />
       <ConfirmDialog
         open={!!deleting}
-        title="Usunąć proces?"
-        message={`Czy na pewno chcesz usunąć proces "${deleting?.name ?? ''}"? Tej operacji nie można cofnąć.`}
-        confirmLabel="Usuń"
+        title={t('confirm.deleteProcess.title')}
+        message={t('confirm.deleteProcess.msg', { name: deleting?.name ?? '' })}
+        confirmLabel={t('common.delete')}
         destructive
         loading={deleteLoading}
         onConfirm={handleDelete}

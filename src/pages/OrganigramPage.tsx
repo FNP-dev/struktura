@@ -1,6 +1,6 @@
-import { useEffect, useMemo, useState, useRef } from 'react';
+import { useMemo, useState, useRef, useEffect } from 'react';
 import {
-  ChevronDown, ChevronRight, User, Network, GitBranch, List,
+  ChevronDown, ChevronRight, User, Network, GitBranch, List, History,
   Plus, Pencil, Trash2, Download, GripVertical, UserCog,
 } from 'lucide-react';
 import { Card } from '../components/ui/Card';
@@ -9,17 +9,19 @@ import { Avatar } from '../components/ui/Avatar';
 import { Button } from '../components/ui/Button';
 import { Select } from '../components/ui/Input';
 import { ConfirmDialog } from '../components/ui/ConfirmDialog';
+import { EmptyState } from '../components/ui/ErrorState';
 import { getDepartmentIcon, levelStyle } from '../components/shared/departmentIcons';
 import { DepartmentFormModal } from '../components/shared/DepartmentFormModal';
-import { fullName } from '../lib/format';
+import { fullName, formatDate } from '../lib/format';
 import { can } from '../hooks/useAuth';
+import { useLang } from '../hooks/useLang';
 import {
   createDepartment, updateDepartment, deleteDepartment,
   reparentDepartment, reassignManager, setEmployeeManager,
   type DepartmentInput,
 } from '../lib/api';
 import type { OrgSnapshot } from '../lib/api';
-import type { EmployeeWithRelations, DepartmentNode } from '../lib/types';
+import type { EmployeeWithRelations, DepartmentNode, ChangeHistory } from '../lib/types';
 import { cn } from '../lib/utils';
 
 interface OrganigramPageProps {
@@ -30,9 +32,10 @@ interface OrganigramPageProps {
 }
 
 type DeptNode = Omit<DepartmentNode, 'children'> & { children: DeptNode[]; staff: EmployeeWithRelations[] };
-type ViewMode = 'tree' | 'list' | 'radial';
+type ViewMode = 'tree' | 'list' | 'radial' | 'history';
 
 export function OrganigramPage({ data, onSelectEmployee, role, onRefresh }: OrganigramPageProps) {
+  const { t } = useLang();
   const [view, setView] = useState<ViewMode>('tree');
   const canWrite = can(role, 'write', 'departments');
   const canDelete = can(role, 'delete', 'departments');
@@ -88,7 +91,6 @@ export function OrganigramPage({ data, onSelectEmployee, role, onRefresh }: Orga
   const expandAll = () => { setExpanded(new Set(allNodes.map((n) => n.id))); setCollapsed(new Set()); };
   const collapseAll = () => { setExpanded(new Set()); setCollapsed(new Set(allNodes.map((n) => n.id))); };
 
-  // Drag & drop + modals
   const [dragId, setDragId] = useState<string | null>(null);
   const [dragOverId, setDragOverId] = useState<string | null>(null);
   const [formOpen, setFormOpen] = useState(false);
@@ -127,14 +129,13 @@ export function OrganigramPage({ data, onSelectEmployee, role, onRefresh }: Orga
       setDeleting(null);
       onRefresh();
     } catch (e) {
-      alert(e instanceof Error ? e.message : 'Nie udało się usunąć');
+      alert(e instanceof Error ? e.message : 'Error');
     } finally { setDeleteLoading(false); }
   };
 
   const handleDrop = async (targetId: string) => {
     setDragOverId(null);
     if (!dragId || dragId === targetId) { setDragId(null); return; }
-    // Prevent dropping a node into its own descendant
     const isDescendant = (root: DeptNode, lookingFor: string): boolean => {
       if (root.id === lookingFor) return true;
       return root.children.some((c) => isDescendant(c, lookingFor));
@@ -143,7 +144,7 @@ export function OrganigramPage({ data, onSelectEmployee, role, onRefresh }: Orga
     const target = allNodes.find((n) => n.id === targetId);
     if (dragged && target && isDescendant(dragged, targetId)) {
       setDragId(null);
-      alert('Nie można przenieść działu do jego własnego poddziału.');
+      alert(t('drag.descendantErr'));
       return;
     }
     const newParent = targetId === '__root' ? null : targetId;
@@ -152,7 +153,7 @@ export function OrganigramPage({ data, onSelectEmployee, role, onRefresh }: Orga
       await reparentDepartment(dragId, newParent);
       onRefresh();
     } catch (e) {
-      alert(e instanceof Error ? e.message : 'Nie udało się przenieść');
+      alert(e instanceof Error ? e.message : 'Error');
     } finally { setDragId(null); }
   };
 
@@ -161,7 +162,7 @@ export function OrganigramPage({ data, onSelectEmployee, role, onRefresh }: Orga
       await reassignManager(deptId, managerId);
       onRefresh();
     } catch (e) {
-      alert(e instanceof Error ? e.message : 'Nie udało się zmienić kierownika');
+      alert(e instanceof Error ? e.message : 'Error');
     }
   };
 
@@ -170,13 +171,11 @@ export function OrganigramPage({ data, onSelectEmployee, role, onRefresh }: Orga
       await setEmployeeManager(employeeId, managerId);
       onRefresh();
     } catch (e) {
-      alert(e instanceof Error ? e.message : 'Nie udało się zmienić przełożonego');
+      alert(e instanceof Error ? e.message : 'Error');
     }
   };
 
-  const exportPdf = () => {
-    window.print();
-  };
+  const exportPdf = () => { window.print(); };
 
   const isDescendantOf = (nodeId: string, ancestorId: string): boolean => {
     const node = allNodes.find((n) => n.id === nodeId);
@@ -190,7 +189,14 @@ export function OrganigramPage({ data, onSelectEmployee, role, onRefresh }: Orga
     return false;
   };
 
+  const structureHistory = useMemo(() => {
+    return data.changeHistory.filter(
+      (h) => h.entity_type === 'department' || h.entity_type === 'employee' || h.entity_type === 'position'
+    );
+  }, [data.changeHistory]);
+
   const renderNode = (node: DeptNode, depth: number): React.ReactNode => {
+    const Icon = getDepartmentIcon(node.icon);
     const isExpanded = effectiveExpanded.has(node.id);
     const hasChildren = node.children.length > 0;
     const style = levelStyle(depth);
@@ -216,13 +222,13 @@ export function OrganigramPage({ data, onSelectEmployee, role, onRefresh }: Orga
         >
           <div className="w-full flex items-center gap-3 p-3 text-left">
             {canWrite && (
-              <span className="shrink-0 text-ink-300 hover:text-ink-500" title="Przeciągnij, aby przenieść">
+              <span className="shrink-0 text-ink-300 hover:text-ink-500" title={t('structure.dragHint')}>
                 <GripVertical size={14} />
               </span>
             )}
             <button onClick={() => hasChildren && toggle(node.id)} className="flex items-center gap-3 flex-1 min-w-0 text-left">
               <span className={cn('flex h-9 w-9 items-center justify-center rounded-lg shrink-0', style.bg, style.text)}>
-                <DepartmentIcon icon={node.icon} size={17} />
+                <Icon size={17} />
               </span>
               <div className="min-w-0 flex-1">
                 <div className="flex items-center gap-1.5">
@@ -230,7 +236,7 @@ export function OrganigramPage({ data, onSelectEmployee, role, onRefresh }: Orga
                   {node.code && <Badge variant="outline" size="sm">{node.code}</Badge>}
                 </div>
                 <p className="text-xs text-ink-400 truncate">
-                  {node.staff.length} prac. {hasChildren && `· ${node.children.length} poddziałów`}
+                  {node.staff.length} {t('structure.employees.short')} {hasChildren && `· ${node.children.length} ${t('structure.subdepartments')}`}
                 </p>
               </div>
               {hasChildren && (
@@ -241,17 +247,17 @@ export function OrganigramPage({ data, onSelectEmployee, role, onRefresh }: Orga
             </button>
             {canWrite && (
               <div className="flex items-center gap-0.5 shrink-0">
-                <button onClick={() => openCreate(node.id)} className="rounded-md p-1 text-ink-400 hover:text-brand-600 hover:bg-brand-50" title="Dodaj poddział">
+                <button onClick={() => openCreate(node.id)} className="rounded-md p-1 text-ink-400 hover:text-brand-600 hover:bg-brand-50" title={t('structure.addSub')}>
                   <Plus size={14} />
                 </button>
-                <button onClick={() => openEdit(node)} className="rounded-md p-1 text-ink-400 hover:text-ink-700 hover:bg-ink-100" title="Edytuj">
+                <button onClick={() => openEdit(node)} className="rounded-md p-1 text-ink-400 hover:text-ink-700 hover:bg-ink-100" title={t('common.edit')}>
                   <Pencil size={13} />
                 </button>
-                <button onClick={() => setManagerPickerFor(node)} className="rounded-md p-1 text-ink-400 hover:text-sky-600 hover:bg-sky-50" title="Zmień kierownika">
+                <button onClick={() => setManagerPickerFor(node)} className="rounded-md p-1 text-ink-400 hover:text-sky-600 hover:bg-sky-50" title={t('structure.changeManager')}>
                   <UserCog size={13} />
                 </button>
                 {canDelete && (
-                  <button onClick={() => setDeleting(node)} className="rounded-md p-1 text-ink-400 hover:text-red-600 hover:bg-red-50" title="Usuń">
+                  <button onClick={() => setDeleting(node)} className="rounded-md p-1 text-ink-400 hover:text-red-600 hover:bg-red-50" title={t('common.delete')}>
                     <Trash2 size={13} />
                   </button>
                 )}
@@ -270,7 +276,7 @@ export function OrganigramPage({ data, onSelectEmployee, role, onRefresh }: Orga
                 <p className="text-[11px] text-ink-400 truncate">{manager.position?.title}</p>
               </div>
               {manager.id === node.manager_id && (
-                <Badge variant="brand" size="sm"><User size={10} /> Kierownik</Badge>
+                <Badge variant="brand" size="sm"><User size={10} /> {t('structure.manager')}</Badge>
               )}
             </button>
           )}
@@ -285,6 +291,7 @@ export function OrganigramPage({ data, onSelectEmployee, role, onRefresh }: Orga
                   canWrite={canWrite}
                   employees={data.employees}
                   onReassignManager={(mid) => handleReassignEmployeeManager(s.id, mid)}
+                  t={t}
                 />
               ))}
             </div>
@@ -311,47 +318,48 @@ export function OrganigramPage({ data, onSelectEmployee, role, onRefresh }: Orga
       <Card className="print:hidden">
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div>
-            <h2 className="text-lg font-semibold text-ink-900">Kreator struktury organizacyjnej</h2>
+            <h2 className="text-lg font-semibold text-ink-900">{t('structure.creator.title')}</h2>
             <p className="text-sm text-ink-500">
-              {canWrite ? 'Przeciągnij jednostki, aby zmienić hierarchię. Dodawaj działy, zespoły i kierowników.' : 'Wizualny schemat struktury organizacyjnej'}
+              {canWrite ? t('structure.creator.desc.write') : t('structure.creator.desc.readonly')}
             </p>
           </div>
           <div className="flex flex-wrap items-center gap-2">
-            <Button variant="secondary" size="sm" onClick={exportPdf}><Download size={15} /> Eksport PDF</Button>
-            {canWrite && <Button variant="secondary" size="sm" onClick={() => openCreate(null)}><Plus size={15} /> Nowa jednostka</Button>}
+            <Button variant="secondary" size="sm" onClick={exportPdf}><Download size={15} /> {t('structure.exportPdf')}</Button>
+            {canWrite && <Button variant="secondary" size="sm" onClick={() => openCreate(null)}><Plus size={15} /> {t('structure.newUnit')}</Button>}
             {view === 'tree' && (
               <div className="flex gap-1">
-                <button onClick={expandAll} className="px-2.5 py-1.5 rounded-md text-xs font-medium text-ink-600 bg-ink-100 hover:bg-ink-200 transition-colors">Rozwiń wszystkie</button>
-                <button onClick={collapseAll} className="px-2.5 py-1.5 rounded-md text-xs font-medium text-ink-600 bg-ink-100 hover:bg-ink-200 transition-colors">Zwiń wszystkie</button>
+                <button onClick={expandAll} className="px-2.5 py-1.5 rounded-md text-xs font-medium text-ink-600 bg-ink-100 hover:bg-ink-200 transition-colors">{t('structure.expandAll')}</button>
+                <button onClick={collapseAll} className="px-2.5 py-1.5 rounded-md text-xs font-medium text-ink-600 bg-ink-100 hover:bg-ink-200 transition-colors">{t('structure.collapseAll')}</button>
               </div>
             )}
             <div className="flex gap-1 rounded-lg bg-ink-100 p-1">
-              <ViewBtn active={view === 'tree'} onClick={() => setView('tree')} icon={<GitBranch size={13} />}>Drzewo</ViewBtn>
-              <ViewBtn active={view === 'radial'} onClick={() => setView('radial')} icon={<Network size={13} />}>Szczegółowe</ViewBtn>
-              <ViewBtn active={view === 'list'} onClick={() => setView('list')} icon={<List size={13} />}>Lista</ViewBtn>
+              <ViewBtn active={view === 'tree'} onClick={() => setView('tree')} icon={<GitBranch size={13} />}>{t('structure.viewTree')}</ViewBtn>
+              <ViewBtn active={view === 'radial'} onClick={() => setView('radial')} icon={<Network size={13} />}>{t('structure.viewRadial')}</ViewBtn>
+              <ViewBtn active={view === 'list'} onClick={() => setView('list')} icon={<List size={13} />}>{t('structure.viewList')}</ViewBtn>
+              <ViewBtn active={view === 'history'} onClick={() => setView('history')} icon={<History size={13} />}>{t('structure.viewHistory')}</ViewBtn>
             </div>
           </div>
         </div>
       </Card>
 
-      {/* PDF export area */}
       <div className="print-area">
         <div className="hidden print:block mb-6">
-          <h1 className="text-2xl font-bold text-ink-900">{data.company?.name ?? 'Firma'} — Organigram</h1>
-          <p className="text-sm text-ink-500">Wygenerowano: {new Date().toLocaleDateString('pl-PL')}</p>
+          <h1 className="text-2xl font-bold text-ink-900">{data.company?.name ?? '—'} — {t('pdf.organigram')}</h1>
+          <p className="text-sm text-ink-500">{t('pdf.generated')}: {new Date().toLocaleDateString()}</p>
         </div>
 
         {view === 'tree' && (
           <Card className="overflow-x-auto print:shadow-none print:border-0">
             <div className="min-w-fit p-6">
               <div className="flex flex-col items-center gap-6">
-                {roots.map((root) => (
-                  <div key={root.id} className="w-full flex flex-col items-center">
-                    {renderNode(root, 0)}
-                  </div>
-                ))}
-                {roots.length === 0 && (
-                  <p className="text-sm text-ink-400 py-8">Brak jednostek. Dodaj pierwszą jednostkę organizacyjną.</p>
+                {roots.length === 0 ? (
+                  <p className="text-sm text-ink-400 py-8">{t('structure.empty')}</p>
+                ) : (
+                  roots.map((root) => (
+                    <div key={root.id} className="w-full flex flex-col items-center">
+                      {renderNode(root, 0)}
+                    </div>
+                  ))
                 )}
               </div>
             </div>
@@ -361,7 +369,7 @@ export function OrganigramPage({ data, onSelectEmployee, role, onRefresh }: Orga
         {view === 'radial' && (
           <Card className="overflow-x-auto print:shadow-none print:border-0">
             <div className="min-w-fit p-6 space-y-4">
-              {roots.map((root) => <RadialNode key={root.id} node={root} depth={0} onSelectEmployee={onSelectEmployee} defaultOpen />)}
+              {roots.map((root) => <RadialNode key={root.id} node={root} depth={0} onSelectEmployee={onSelectEmployee} defaultOpen t={t} />)}
             </div>
           </Card>
         )}
@@ -372,6 +380,10 @@ export function OrganigramPage({ data, onSelectEmployee, role, onRefresh }: Orga
               {roots.map((root) => <ListRow key={root.id} node={root} depth={0} onSelectEmployee={onSelectEmployee} defaultOpen />)}
             </div>
           </Card>
+        )}
+
+        {view === 'history' && (
+          <StructureHistoryView entries={structureHistory} t={t} />
         )}
       </div>
 
@@ -387,9 +399,9 @@ export function OrganigramPage({ data, onSelectEmployee, role, onRefresh }: Orga
       />
       <ConfirmDialog
         open={!!deleting}
-        title="Usunąć jednostkę?"
-        message={`Czy na pewno chcesz usunąć "${deleting?.name ?? ''}"? Podległe jednostki zostaną przeniesione na wyższy poziom.`}
-        confirmLabel="Usuń"
+        title={t('confirm.deleteUnit.title')}
+        message={t('confirm.deleteUnit.msg', { name: deleting?.name ?? '' })}
+        confirmLabel={t('common.delete')}
         destructive
         loading={deleteLoading}
         onConfirm={handleDelete}
@@ -401,10 +413,13 @@ export function OrganigramPage({ data, onSelectEmployee, role, onRefresh }: Orga
         node={managerPickerFor}
         employees={data.employees}
         onSelect={(mid) => { if (managerPickerFor) handleReassignManager(managerPickerFor.id, mid); setManagerPickerFor(null); }}
+        t={t}
       />
     </div>
   );
 }
+
+type TFunc = (key: string, vars?: Record<string, string | number>) => string;
 
 function ViewBtn({ active, onClick, icon, children }: { active: boolean; onClick: () => void; icon: React.ReactNode; children: React.ReactNode }) {
   return (
@@ -418,13 +433,14 @@ function ViewBtn({ active, onClick, icon, children }: { active: boolean; onClick
 }
 
 function EmployeeRow({
-  employee, onSelect, canWrite, employees, onReassignManager,
+  employee, onSelect, canWrite, employees, onReassignManager, t,
 }: {
   employee: EmployeeWithRelations;
   onSelect: () => void;
   canWrite: boolean;
   employees: EmployeeWithRelations[];
   onReassignManager: (managerId: string | null) => void;
+  t: TFunc;
 }) {
   const [pickerOpen, setPickerOpen] = useState(false);
   return (
@@ -440,7 +456,7 @@ function EmployeeRow({
         <button
           onClick={() => setPickerOpen(true)}
           className="opacity-0 group-hover:opacity-100 rounded p-1 text-ink-400 hover:text-sky-600 hover:bg-sky-50 transition-all"
-          title="Zmień przełożonego"
+          title={t('structure.changeSupervisor')}
         >
           <UserCog size={12} />
         </button>
@@ -449,9 +465,9 @@ function EmployeeRow({
         <div className="fixed inset-0 z-50 flex items-center justify-center p-4" onClick={() => setPickerOpen(false)}>
           <div className="absolute inset-0 bg-ink-950/40" />
           <div className="relative bg-white rounded-xl shadow-lift p-4 max-w-sm w-full" onClick={(e) => e.stopPropagation()}>
-            <h4 className="text-sm font-semibold text-ink-900 mb-2">Przełożony dla {fullName(employee)}</h4>
+            <h4 className="text-sm font-semibold text-ink-900 mb-2">{t('supervisorPicker.title', { name: fullName(employee) })}</h4>
             <Select onChange={(e) => { onReassignManager(e.target.value || null); setPickerOpen(false); }} value={employee.manager_id ?? ''}>
-              <option value="">— brak —</option>
+              <option value="">{t('supervisorPicker.none')}</option>
               {employees.filter((m) => m.id !== employee.id).map((m) => (
                 <option key={m.id} value={m.id}>{fullName(m)}</option>
               ))}
@@ -464,27 +480,24 @@ function EmployeeRow({
 }
 
 function ManagerPickerModal({
-  open, onClose, node, employees, onSelect,
+  open, onClose, node, employees, onSelect, t,
 }: {
   open: boolean;
   onClose: () => void;
   node: DepartmentNode | null;
   employees: EmployeeWithRelations[];
   onSelect: (managerId: string | null) => void;
+  t: TFunc;
 }) {
   const [value, setValue] = useState<string>('');
   const lastNodeId = useRef<string | null>(null);
 
   useEffect(() => {
-    if (open && node) {
-      if (lastNodeId.current !== node.id) {
-        lastNodeId.current = node.id;
-        setValue(node.manager_id ?? '');
-      }
-    } else {
-      lastNodeId.current = null;
-      setValue('');
+    if (open && node && lastNodeId.current !== node.id) {
+      lastNodeId.current = node.id;
+      setValue(node.manager_id ?? '');
     }
+    if (!open && lastNodeId.current !== null) lastNodeId.current = null;
   }, [open, node]);
 
   if (!open || !node) return null;
@@ -492,25 +505,25 @@ function ManagerPickerModal({
     <div className="fixed inset-0 z-50 flex items-center justify-center p-4 animate-fade-in">
       <div className="absolute inset-0 bg-ink-950/40 backdrop-blur-sm" onClick={onClose} />
       <div className="relative bg-white rounded-2xl shadow-lift p-5 max-w-md w-full">
-        <h3 className="text-base font-semibold text-ink-900 mb-1">Kierownik działu</h3>
+        <h3 className="text-base font-semibold text-ink-900 mb-1">{t('managerPicker.title')}</h3>
         <p className="text-sm text-ink-500 mb-3">{node.name}</p>
         <Select value={value} onChange={(e) => setValue(e.target.value)}>
-          <option value="">— brak kierownika —</option>
+          <option value="">{t('managerPicker.none')}</option>
           {employees.map((m) => (
             <option key={m.id} value={m.id}>{fullName(m)}</option>
           ))}
         </Select>
         <div className="flex justify-end gap-2 mt-4">
-          <Button variant="secondary" size="sm" onClick={onClose}>Anuluj</Button>
-          <Button variant="primary" size="sm" onClick={() => onSelect(value || null)}>Zapisz</Button>
+          <Button variant="secondary" size="sm" onClick={onClose}>{t('common.cancel')}</Button>
+          <Button variant="primary" size="sm" onClick={() => onSelect(value || null)}>{t('common.save')}</Button>
         </div>
       </div>
     </div>
   );
 }
 
-function DepartmentIcon({ icon, size }: { icon?: string | null; size: number }) {
-  const Icon = getDepartmentIcon(icon);
+function DepartmentIcon({ name, size }: { name?: string | null; size?: number | string }) {
+  const Icon = getDepartmentIcon(name);
   return <Icon size={size} />;
 }
 
@@ -535,13 +548,13 @@ function ListRow({
           </button>
         ) : <span className="w-5" />}
         <span className={cn('flex h-7 w-7 items-center justify-center rounded-lg shrink-0', style.bg, style.text)}>
-          <DepartmentIcon icon={node.icon} size={14} />
+          <DepartmentIcon name={node.icon} size={14} />
         </span>
         <div className="min-w-0 flex-1">
           <span className="text-sm font-medium text-ink-800">{node.name}</span>
           {node.code && <span className="ml-2 text-xs text-ink-400">{node.code}</span>}
         </div>
-        <span className="text-xs text-ink-400">{node.staff.length} os.</span>
+        <span className="text-xs text-ink-400">{node.staff.length}</span>
         {manager && (
           <button onClick={() => onSelectEmployee(manager)} className="flex items-center gap-1.5 px-2 py-1 rounded-md hover:bg-white transition-colors">
             <Avatar src={manager.avatar_url} first={manager.first_name} last={manager.last_name} size="xs" />
@@ -551,7 +564,7 @@ function ListRow({
       </div>
       {open && (
         <div>
-          {node.children.map((c) => <ListRow key={c.id} node={c ?? 'empty'} depth={depth + 1} onSelectEmployee={onSelectEmployee} />)}
+          {node.children.map((c) => <ListRow key={c.id} node={c} depth={depth + 1} onSelectEmployee={onSelectEmployee} />)}
         </div>
       )}
     </div>
@@ -559,14 +572,16 @@ function ListRow({
 }
 
 function RadialNode({
-  node, depth, onSelectEmployee, defaultOpen,
+  node, depth, onSelectEmployee, defaultOpen, t,
 }: {
   node: DeptNode;
   depth: number;
   onSelectEmployee: (e: EmployeeWithRelations) => void;
   defaultOpen?: boolean;
+  t: TFunc;
 }) {
   const [open, setOpen] = useState(!!defaultOpen);
+  const iconName = node.icon;
   const style = levelStyle(node.level);
   const hasChildren = node.children.length > 0;
 
@@ -580,7 +595,7 @@ function RadialNode({
             </button>
           )}
           <span className={cn('flex h-9 w-9 items-center justify-center rounded-lg shrink-0', style.bg, style.text)}>
-            <DepartmentIcon icon={node.icon} size={17} />
+            <DepartmentIcon name={iconName} size={17} />
           </span>
           <div className="min-w-0 flex-1">
             <div className="flex items-center gap-1.5">
@@ -588,7 +603,7 @@ function RadialNode({
               {node.code && <Badge variant="outline" size="sm">{node.code}</Badge>}
             </div>
             <p className="text-xs text-ink-400 truncate">
-              {node.staff.length} prac. {hasChildren && `· ${node.children.length} poddziałów`}
+              {node.staff.length} prac. {hasChildren && `· ${node.children.length}`}
             </p>
           </div>
         </div>
@@ -602,7 +617,7 @@ function RadialNode({
                   <div className="min-w-0 flex-1">
                     <p className="text-xs font-medium text-ink-800 truncate flex items-center gap-1">
                       {fullName(s)}
-                      {isManager && <Badge variant="brand" size="sm">Kierownik</Badge>}
+                      {isManager && <Badge variant="brand" size="sm">{t('structure.manager')}</Badge>}
                     </p>
                     <p className="text-[11px] text-ink-400 truncate">{s.position?.title}</p>
                   </div>
@@ -614,9 +629,78 @@ function RadialNode({
       </div>
       {open && hasChildren && (
         <div className="mt-3 space-y-3 border-l-2 border-ink-100 pl-3">
-          {node.children.map((c) => <RadialNode key={c.id} node={c} depth={depth + 1} onSelectEmployee={onSelectEmployee} />)}
+          {node.children.map((c) => <RadialNode key={c.id} node={c} depth={depth + 1} onSelectEmployee={onSelectEmployee} t={t} />)}
         </div>
       )}
     </div>
   );
 }
+
+// ============ Change History View ============
+function StructureHistoryView({ entries, t }: { entries: ChangeHistory[]; t: TFunc }) {
+  if (entries.length === 0) {
+    return (
+      <Card>
+        <EmptyState
+          title={t('structure.history.title')}
+          description={t('structure.history.empty')}
+        />
+      </Card>
+    );
+  }
+
+  const actionIcon = (action: string) => {
+    if (action === 'create') return { icon: Plus, color: 'bg-emerald-100 text-emerald-700' };
+    if (action === 'update') return { icon: Pencil, color: 'bg-sky-100 text-sky-700' };
+    return { icon: Trash2, color: 'bg-red-100 text-red-700' };
+  };
+
+  const entityLabel = (entityType: string): string => {
+    const key = `structure.history.entity.${entityType}`;
+    const val = t(key);
+    return val === key ? entityType : val;
+  };
+
+  return (
+    <div className="space-y-4">
+      <Card>
+        <div className="mb-1">
+          <h3 className="text-base font-semibold text-ink-900">{t('structure.history.title')}</h3>
+          <p className="text-sm text-ink-500">{t('structure.history.desc')}</p>
+        </div>
+      </Card>
+      <Card>
+        <div className="relative">
+          <div className="absolute left-5 top-2 bottom-2 w-px bg-ink-100" />
+          <div className="space-y-4">
+            {entries.map((entry) => {
+              const { icon: Icon, color } = actionIcon(entry.action);
+              return (
+                <div key={entry.id} className="relative flex gap-4">
+                  <div className={cn('relative z-10 flex h-10 w-10 items-center justify-center rounded-full shrink-0 ring-4 ring-white', color)}>
+                    <Icon size={16} />
+                  </div>
+                  <div className="min-w-0 flex-1 pb-2">
+                    <div className="flex flex-wrap items-center gap-2">
+                      <Badge variant="outline" size="sm">{entityLabel(entry.entity_type)}</Badge>
+                      <span className="text-xs font-medium text-ink-500">
+                        {t(`structure.history.action.${entry.action}`)}
+                      </span>
+                    </div>
+                    <p className="text-sm text-ink-800 mt-1">{entry.summary}</p>
+                    <p className="text-xs text-ink-400 mt-0.5">
+                      {entry.changed_by ? `${t('structure.history.by')} ${entry.changed_by} · ` : ''}
+                      {formatDate(entry.created_at)}
+                    </p>
+                  </div>
+                </div>
+              );
+            })}
+          </div>
+        </div>
+      </Card>
+    </div>
+  );
+}
+// useEffect is imported from React above
+

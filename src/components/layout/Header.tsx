@@ -1,5 +1,7 @@
-import { Search, Menu, Bell } from 'lucide-react';
+import { Search, Menu, Bell, Globe } from 'lucide-react';
 import { Input } from '../ui/Input';
+import { useLang, LANGUAGES, LANG_LABELS } from '../../hooks/useLang';
+import { cn } from '../../lib/utils';
 
 interface HeaderProps {
   title: string;
@@ -12,6 +14,8 @@ interface HeaderProps {
 }
 
 export function Header({ title, subtitle, onMobileMenu, search, onSearchChange, searchPlaceholder, actions }: HeaderProps) {
+  const { lang, setLang, t } = useLang();
+
   return (
     <header className="sticky top-0 z-20 bg-white/80 backdrop-blur-md border-b border-ink-200">
       <div className="flex items-center gap-3 px-4 sm:px-6 h-16">
@@ -32,7 +36,7 @@ export function Header({ title, subtitle, onMobileMenu, search, onSearchChange, 
           <div className="hidden md:block w-64">
             <Input
               icon={<Search size={15} />}
-              placeholder={searchPlaceholder ?? 'Szukaj…'}
+              placeholder={searchPlaceholder ?? t('common.search')}
               value={search ?? ''}
               onChange={(e) => onSearchChange(e.target.value)}
             />
@@ -41,7 +45,25 @@ export function Header({ title, subtitle, onMobileMenu, search, onSearchChange, 
 
         <div className="flex items-center gap-2">
           {actions}
-          <button className="relative rounded-lg p-2 text-ink-500 hover:bg-ink-100 transition-colors" aria-label="Powiadomienia">
+
+          {/* Language switcher — driven by LANGUAGES registry */}
+          <div className="flex items-center rounded-lg bg-ink-100 p-0.5 gap-0.5">
+            <Globe size={14} className="ml-1 text-ink-400" />
+            {LANGUAGES.map((l) => (
+              <button
+                key={l}
+                onClick={() => setLang(l)}
+                className={cn(
+                  'px-2 py-1 rounded-md text-xs font-semibold transition-all',
+                  lang === l ? 'bg-white text-ink-900 shadow-sm' : 'text-ink-500 hover:text-ink-700'
+                )}
+              >
+                {LANG_LABELS[l].short}
+              </button>
+            ))}
+          </div>
+
+          <button className="relative rounded-lg p-2 text-ink-500 hover:bg-ink-100 transition-colors" aria-label={t('common.close')}>
             <Bell size={18} />
             <span className="absolute top-1.5 right-1.5 h-1.5 w-1.5 rounded-full bg-brand-500" />
           </button>
@@ -51,7 +73,7 @@ export function Header({ title, subtitle, onMobileMenu, search, onSearchChange, 
         <div className="md:hidden px-4 pb-3">
           <Input
             icon={<Search size={15} />}
-            placeholder={searchPlaceholder ?? 'Szukaj…'}
+            placeholder={searchPlaceholder ?? t('common.search')}
             value={search ?? ''}
             onChange={(e) => onSearchChange(e.target.value)}
           />

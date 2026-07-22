@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import { AuthProvider, useAuth } from './hooks/useAuth';
+import { LangProvider, useLang } from './hooks/useLang';
 import { Sidebar, type PageKey } from './components/layout/Sidebar';
 import { Header } from './components/layout/Header';
 import { EmployeeDetailModal } from './components/shared/EmployeeDetailModal';
@@ -24,25 +25,26 @@ import { DocumentsPage } from './pages/DocumentsPage';
 import { ReportsPage } from './pages/ReportsPage';
 import { AdminPage } from './pages/AdminPage';
 
-const PAGE_META: Record<PageKey, { title: string; subtitle?: string }> = {
-  dashboard: { title: 'Dashboard', subtitle: 'Przegląd struktury organizacyjnej' },
-  company: { title: 'Firma', subtitle: 'Dane firmy i lokalizacje' },
-  structure: { title: 'Struktura organizacyjna', subtitle: 'Zarząd, działy i organigram' },
-  board: { title: 'Zarząd', subtitle: 'Członkowie zarządu' },
-  departments: { title: 'Działy', subtitle: 'Hierarchia jednostek organizacyjnych' },
-  organigram: { title: 'Organigram', subtitle: 'Wizualny schemat organizacyjny' },
-  employees: { title: 'Pracownicy', subtitle: 'Katalog pracowników' },
-  positions: { title: 'Stanowiska', subtitle: 'Role i zakresy obowiązków' },
-  processes: { title: 'Procesy', subtitle: 'Kluczowe procesy biznesowe' },
-  performance: { title: 'Oceny pracownicze', subtitle: 'Cele, OKR i oceny okresowe' },
-  documents: { title: 'Dokumenty', subtitle: 'Regulaminy, procedury i polityki' },
-  reports: { title: 'Raporty', subtitle: 'Statystyki i analityka organizacyjna' },
-  admin: { title: 'Administracja', subtitle: 'Role, uprawnienia i historia zmian' },
+const PAGE_META_KEYS: Record<PageKey, { titleKey: string; subtitleKey: string }> = {
+  dashboard: { titleKey: 'page.dashboard.title', subtitleKey: 'page.dashboard.subtitle' },
+  company: { titleKey: 'page.company.title', subtitleKey: 'page.company.subtitle' },
+  structure: { titleKey: 'page.structure.title', subtitleKey: 'page.structure.subtitle' },
+  board: { titleKey: 'page.board.title', subtitleKey: 'page.board.subtitle' },
+  departments: { titleKey: 'page.departments.title', subtitleKey: 'page.departments.subtitle' },
+  organigram: { titleKey: 'page.organigram.title', subtitleKey: 'page.organigram.subtitle' },
+  employees: { titleKey: 'page.employees.title', subtitleKey: 'page.employees.subtitle' },
+  positions: { titleKey: 'page.positions.title', subtitleKey: 'page.positions.subtitle' },
+  processes: { titleKey: 'page.processes.title', subtitleKey: 'page.processes.subtitle' },
+  performance: { titleKey: 'page.performance.title', subtitleKey: 'page.performance.subtitle' },
+  documents: { titleKey: 'page.documents.title', subtitleKey: 'page.documents.subtitle' },
+  reports: { titleKey: 'page.reports.title', subtitleKey: 'page.reports.subtitle' },
+  admin: { titleKey: 'page.admin.title', subtitleKey: 'page.admin.subtitle' },
 };
 
 function Shell() {
   const { session, user, profile, role, loading: authLoading, signOut } = useAuth();
   const { data, loading, error, refresh } = useOrgData();
+  const { t } = useLang();
   const [page, setPage] = useState<PageKey>('dashboard');
   const [mobileMenuOpen, setMobileMenuOpen] = useState(false);
   const [selectedEmployee, setSelectedEmployee] = useState<EmployeeWithRelations | null>(null);
@@ -71,7 +73,7 @@ function Shell() {
       <div className="min-h-screen flex items-center justify-center bg-ink-100">
         <div className="flex flex-col items-center gap-3">
           <div className="h-8 w-8 rounded-full border-2 border-brand-500 border-t-transparent animate-spin" />
-          <p className="text-sm text-ink-500">Wczytywanie sesji…</p>
+          <p className="text-sm text-ink-500">{t('auth.loadingSession')}</p>
         </div>
       </div>
     );
@@ -87,8 +89,8 @@ function Shell() {
       <div className="min-h-screen flex items-center justify-center bg-ink-100">
         <div className="flex flex-col items-center gap-3">
           <div className="h-8 w-8 rounded-full border-2 border-brand-500 border-t-transparent animate-spin" />
-          <p className="text-sm text-ink-500">Inicjalizacja profilu…</p>
-          <Button variant="ghost" size="sm" onClick={signOut}>Anuluj i wyloguj</Button>
+          <p className="text-sm text-ink-500">{t('auth.initProfile')}</p>
+          <Button variant="ghost" size="sm" onClick={signOut}>{t('auth.cancelSignOut')}</Button>
         </div>
       </div>
     );
@@ -96,7 +98,8 @@ function Shell() {
 
   // Role gate for admin page
   const effectivePage = page === 'admin' && role !== 'admin' ? 'dashboard' : page;
-  const meta = PAGE_META[effectivePage];
+  const metaKeys = PAGE_META_KEYS[effectivePage];
+  const meta = { title: t(metaKeys.titleKey), subtitle: t(metaKeys.subtitleKey) };
   const companyName = data?.company?.name ?? 'Nordtech Solutions';
 
   return (
@@ -120,7 +123,7 @@ function Shell() {
           onMobileMenu={() => setMobileMenuOpen(true)}
           actions={
             <Button variant="ghost" size="sm" onClick={signOut} className="hidden sm:inline-flex">
-              Wyloguj
+              {t('auth.signOut')}
             </Button>
           }
         />
@@ -134,14 +137,14 @@ function Shell() {
             </div>
           ) : data.employees.length === 0 && data.departments.length === 0 ? (
             <EmptyState
-              title="Brak danych do wyświetlenia"
-              description="Twoje konto nie ma uprawnień do odczytu danych lub baza jest pusta. Skontaktuj się z administratorem."
+              title={t('error.noData.title')}
+              description={t('error.noData.desc')}
             />
           ) : (
             <>
               {effectivePage === 'dashboard' && <DashboardPage data={data} onNavigate={setPage} onSelectEmployee={handleSelectEmployee} />}
               {effectivePage === 'company' && <CompanyPage data={data} onSelectEmployee={handleSelectEmployee} />}
-              {effectivePage === 'structure' && <DepartmentsPage data={data} onSelectEmployee={handleSelectEmployee} />}
+              {effectivePage === 'structure' && <OrganigramPage data={data} onSelectEmployee={handleSelectEmployee} role={role} onRefresh={refresh} />}
               {effectivePage === 'board' && <BoardPage data={data} onSelectEmployee={handleSelectEmployee} />}
               {effectivePage === 'departments' && <DepartmentsPage data={data} onSelectEmployee={handleSelectEmployee} />}
               {effectivePage === 'organigram' && <OrganigramPage data={data} onSelectEmployee={handleSelectEmployee} role={role} onRefresh={refresh} />}
@@ -157,7 +160,7 @@ function Shell() {
         </main>
 
         <footer className="border-t border-ink-200 px-6 py-4 text-center text-xs text-ink-400">
-          {companyName} · System zarządzania strukturą organizacyjną
+          {companyName} · {t('footer.tagline')}
         </footer>
       </div>
 
@@ -169,7 +172,7 @@ function Shell() {
       />
       {loadingEmployee && (
         <div className="fixed bottom-4 right-4 z-50 rounded-lg bg-white shadow-lift border border-ink-200 px-4 py-2 text-sm text-ink-600">
-          Wczytywanie profilu…
+          {t('employee.loadingProfile')}
         </div>
       )}
     </div>
@@ -178,8 +181,10 @@ function Shell() {
 
 export default function App() {
   return (
-    <AuthProvider>
-      <Shell />
-    </AuthProvider>
+    <LangProvider>
+      <AuthProvider>
+        <Shell />
+      </AuthProvider>
+    </LangProvider>
   );
 }

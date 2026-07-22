@@ -7,6 +7,7 @@ import { Button } from '../ui/Button';
 import { Badge } from '../ui/Badge';
 import { DocumentTypeBadge, DocumentStatusBadge } from './badges';
 import { formatDate, formatDateTime } from '../../lib/format';
+import { useLang } from '../../hooks/useLang';
 import type { OrgSnapshot } from '../../lib/api';
 import { fetchDocumentVersions, restoreDocumentVersion } from '../../lib/api';
 import type { DocumentItem, DocumentVersion } from '../../lib/types';
@@ -22,6 +23,7 @@ interface DocumentDetailModalProps {
 }
 
 export function DocumentDetailModal({ open, document: doc, data, onClose, onEdit, onDelete, canEdit }: DocumentDetailModalProps) {
+  const { t } = useLang();
   const [versions, setVersions] = useState<DocumentVersion[]>([]);
   const [loadingVersions, setLoadingVersions] = useState(false);
   const [restoringId, setRestoringId] = useState<string | null>(null);
@@ -40,7 +42,7 @@ export function DocumentDetailModal({ open, document: doc, data, onClose, onEdit
 
   if (!doc) return null;
 
-  const deptName = data.departments.find((d) => d.id === doc.department_id)?.name ?? 'Firma (ogólny)';
+  const deptName = data.departments.find((d) => d.id === doc.department_id)?.name ?? t('docDetail.general');
 
   const handleRestore = async (versionId: string) => {
     setRestoringId(versionId);
@@ -48,8 +50,8 @@ export function DocumentDetailModal({ open, document: doc, data, onClose, onEdit
       await restoreDocumentVersion(versionId);
       await fetchDocumentVersions(doc.id).then(setVersions);
       onClose();
-    } catch (e) {
-      alert(e instanceof Error ? e.message : 'Nie udało się przywrócić wersji');
+    } catch {
+      alert(t('docDetail.restoreFailed'));
     } finally {
       setRestoringId(null);
     }
@@ -64,56 +66,52 @@ export function DocumentDetailModal({ open, document: doc, data, onClose, onEdit
       subtitle={deptName}
       footer={
         <>
-          <Button variant="secondary" onClick={onClose}>Zamknij</Button>
+          <Button variant="secondary" onClick={onClose}>{t('common.close')}</Button>
           {canEdit && (
             <>
-              <Button variant="secondary" onClick={() => onEdit(doc)}><Pencil size={14} /> Edytuj</Button>
-              <Button variant="danger" onClick={() => onDelete(doc)}><Trash2 size={14} /> Usuń</Button>
+              <Button variant="secondary" onClick={() => onEdit(doc)}><Pencil size={14} /> {t('common.edit')}</Button>
+              <Button variant="danger" onClick={() => onDelete(doc)}><Trash2 size={14} /> {t('common.delete')}</Button>
             </>
           )}
         </>
       }
     >
       <div className="space-y-6">
-        {/* Badges */}
         <div className="flex flex-wrap gap-1.5">
           <DocumentTypeBadge type={doc.type} />
           <DocumentStatusBadge status={doc.status} />
-          {doc.version && <Badge variant="outline">Wersja {doc.version}</Badge>}
+          {doc.version && <Badge variant="outline">{t('docDetail.version', { v: doc.version })}</Badge>}
         </div>
 
-        {/* Description */}
         {doc.description && (
           <p className="text-sm text-ink-700 leading-relaxed">{doc.description}</p>
         )}
 
-        {/* Meta */}
         <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-          <MetaRow icon={<Building2 size={14} />} label="Dział" value={deptName} />
-          <MetaRow icon={<Calendar size={14} />} label="Data wejścia w życie" value={formatDate(doc.effective_date)} />
+          <MetaRow icon={<Building2 size={14} />} label={t('docDetail.department')} value={deptName} />
+          <MetaRow icon={<Calendar size={14} />} label={t('docDetail.effectiveDate')} value={formatDate(doc.effective_date)} />
           <MetaRow
             icon={<FileText size={14} />}
-            label="Plik"
+            label={t('docDetail.file')}
             value={
               doc.file_url ? (
                 <a href={doc.file_url} target="_blank" rel="noreferrer" className="text-brand-600 hover:text-brand-700 font-medium inline-flex items-center gap-1">
-                  Otwórz <ExternalLink size={12} />
+                  {t('common.open')} <ExternalLink size={12} />
                 </a>
-              ) : 'Brak pliku'
+              ) : t('common.noFile')
             }
           />
-          <MetaRow icon={<Calendar size={14} />} label="Dodano" value={formatDate(doc.created_at)} />
+          <MetaRow icon={<Calendar size={14} />} label={t('docDetail.added')} value={formatDate(doc.created_at)} />
         </div>
 
-        {/* Version history */}
         <div>
           <h4 className="text-xs font-semibold uppercase tracking-wide text-ink-500 mb-3 flex items-center gap-1.5">
-            <History size={14} /> Historia wersji ({versions.length})
+            <History size={14} /> {t('docDetail.versionHistory', { count: versions.length })}
           </h4>
           {loadingVersions ? (
-            <p className="text-sm text-ink-400">Wczytywanie…</p>
+            <p className="text-sm text-ink-400">{t('common.loading')}</p>
           ) : versions.length === 0 ? (
-            <p className="text-sm text-ink-400">Brak wcześniejszych wersji. Wersje są archiwizowane automatycznie przy każdej edycji dokumentu.</p>
+            <p className="text-sm text-ink-400">{t('docDetail.noVersions')}</p>
           ) : (
             <div className="space-y-2">
               {versions.map((v) => (
@@ -125,9 +123,9 @@ export function DocumentDetailModal({ open, document: doc, data, onClose, onEdit
                         <span className="text-sm font-medium text-ink-800 truncate">{v.title}</span>
                       </div>
                       <div className="mt-1.5 text-xs text-ink-400 space-y-0.5">
-                        <p>Archiwizacja: {formatDateTime(v.archived_at)}</p>
-                        {v.archived_by && <p>Przez: {v.archived_by}</p>}
-                        {v.effective_date && <p>Data wejścia: {formatDate(v.effective_date)}</p>}
+                        <p>{t('docDetail.archivedAt', { date: formatDateTime(v.archived_at) })}</p>
+                        {v.archived_by && <p>{t('docDetail.archivedBy', { name: v.archived_by })}</p>}
+                        {v.effective_date && <p>{t('docDetail.effectiveDateShort', { date: formatDate(v.effective_date) })}</p>}
                       </div>
                       {v.description && <p className="mt-2 text-xs text-ink-600 line-clamp-2">{v.description}</p>}
                     </div>
@@ -137,10 +135,10 @@ export function DocumentDetailModal({ open, document: doc, data, onClose, onEdit
                         size="sm"
                         onClick={() => handleRestore(v.id)}
                         disabled={restoringId === v.id}
-                        title="Przywróć tę wersję"
+                        title={t('docDetail.restoreTitle')}
                       >
                         <RotateCcw size={13} />
-                        {restoringId === v.id ? '…' : 'Przywróć'}
+                        {restoringId === v.id ? '…' : t('docDetail.restore')}
                       </Button>
                     )}
                   </div>

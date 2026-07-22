@@ -6,6 +6,7 @@ import { StatCard } from '../components/ui/StatCard';
 import { cn } from '../lib/utils';
 import type { OrgSnapshot } from '../lib/api';
 import type { EmployeeWithRelations } from '../lib/types';
+import { useLang } from '../hooks/useLang';
 
 interface ReportsPageProps {
   data: OrgSnapshot;
@@ -14,6 +15,7 @@ interface ReportsPageProps {
 
 export function ReportsPage({ data, onSelectEmployee }: ReportsPageProps) {
   const { employees, departments, positions, locations } = data;
+  const { t } = useLang();
 
   // Employees per department (including sub-departments rollup to top-level pion)
   const topLevelPions = departments.filter((d) => d.level === 1);
@@ -68,7 +70,7 @@ export function ReportsPage({ data, onSelectEmployee }: ReportsPageProps) {
   const levelStats = useMemo(() => {
     const map = new Map<string, number>();
     employees.forEach((e) => {
-      const lvl = e.position?.level ?? 'Nieokreślony';
+      const lvl = e.position?.level ?? t('reports.unknownLevel');
       map.set(lvl, (map.get(lvl) ?? 0) + 1);
     });
     return Array.from(map.entries()).sort((a, b) => b[1] - a[1]);
@@ -83,15 +85,15 @@ export function ReportsPage({ data, onSelectEmployee }: ReportsPageProps) {
   const maxComp = Math.max(...competencyStats.map((c) => c[1]), 1);
 
   // Tenure distribution
-  const tenureBuckets = { '<1 rok': 0, '1-3 lata': 0, '3-5 lat': 0, '5-10 lat': 0, '10+ lat': 0 };
+  const tenureBuckets = { lt1: 0, '1to3': 0, '3to5': 0, '5to10': 0, '10plus': 0 };
   employees.forEach((e) => {
     if (!e.hire_date) return;
     const years = (Date.now() - new Date(e.hire_date).getTime()) / (1000 * 60 * 60 * 24 * 365.25);
-    if (years < 1) tenureBuckets['<1 rok']++;
-    else if (years < 3) tenureBuckets['1-3 lata']++;
-    else if (years < 5) tenureBuckets['3-5 lat']++;
-    else if (years < 10) tenureBuckets['5-10 lat']++;
-    else tenureBuckets['10+ lat']++;
+    if (years < 1) tenureBuckets.lt1++;
+    else if (years < 3) tenureBuckets['1to3']++;
+    else if (years < 5) tenureBuckets['3to5']++;
+    else if (years < 10) tenureBuckets['5to10']++;
+    else tenureBuckets['10plus']++;
   });
 
   const vacantPositions = positions.filter((p) => p.is_vacant);
@@ -100,22 +102,22 @@ export function ReportsPage({ data, onSelectEmployee }: ReportsPageProps) {
     <div className="space-y-6 animate-fade-in">
       {/* KPIs */}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
-        <StatCard label="Pracownicy" value={employees.length} icon={<Users size={16} />} variant="brand" />
-        <StatCard label="Działy" value={departments.length} icon={<Building2 size={16} />} variant="info" />
-        <StatCard label="Stanowiska" value={positions.length} icon={<Briefcase size={16} />} variant="success" />
-        <StatCard label="Wakaty" value={vacantPositions.length} icon={<TrendingUp size={16} />} variant="warning" />
+        <StatCard label={t('reports.employees')} value={employees.length} icon={<Users size={16} />} variant="brand" />
+        <StatCard label={t('reports.departments')} value={departments.length} icon={<Building2 size={16} />} variant="info" />
+        <StatCard label={t('reports.positions')} value={positions.length} icon={<Briefcase size={16} />} variant="success" />
+        <StatCard label={t('reports.vacancies')} value={vacantPositions.length} icon={<TrendingUp size={16} />} variant="warning" />
       </div>
 
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Employees per pion — bar chart */}
         <Card>
-          <CardHeader title="Zatrudnienie w pionach" subtitle="Liczba pracowników na dyrekcję (z poddziałami)" />
+          <CardHeader title={t('reports.empPerPion')} subtitle={t('reports.empPerPionSub')} />
           <div className="space-y-3">
             {pionStats.map(({ pion, empCount, deptCount }) => (
               <div key={pion.id}>
                 <div className="flex items-center justify-between text-sm mb-1">
                   <span className="text-ink-700 font-medium truncate">{pion.name}</span>
-                  <span className="text-ink-500 text-xs">{empCount} prac. · {deptCount} działów</span>
+                  <span className="text-ink-500 text-xs">{t('reports.empPerPionStats', { emp: empCount, dept: deptCount })}</span>
                 </div>
                 <div className="h-2.5 bg-ink-100 rounded-full overflow-hidden">
                   <div
@@ -130,7 +132,7 @@ export function ReportsPage({ data, onSelectEmployee }: ReportsPageProps) {
 
         {/* Employees per location */}
         <Card>
-          <CardHeader title="Pracownicy per lokalizacja" subtitle="Rozkład geograficzny" />
+          <CardHeader title={t('reports.empPerLocation')} subtitle={t('reports.empPerLocationSub')} />
           <div className="space-y-3">
             {locStats.map(({ loc, count }) => (
               <div key={loc.id}>
@@ -138,9 +140,9 @@ export function ReportsPage({ data, onSelectEmployee }: ReportsPageProps) {
                   <span className="text-ink-700 font-medium flex items-center gap-1.5">
                     <MapPin size={13} className="text-ink-400" />
                     {loc.name}
-                    {loc.is_headquarters && <Badge variant="brand" size="sm">HQ</Badge>}
+                    {loc.is_headquarters && <Badge variant="brand" size="sm">{t('badge.HQ')}</Badge>}
                   </span>
-                  <span className="text-ink-500 text-xs">{count} prac.</span>
+                  <span className="text-ink-500 text-xs">{t('reports.empCount', { count: count })}</span>
                 </div>
                 <div className="h-2.5 bg-ink-100 rounded-full overflow-hidden">
                   <div
@@ -157,26 +159,26 @@ export function ReportsPage({ data, onSelectEmployee }: ReportsPageProps) {
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Status breakdown — donut */}
         <Card>
-          <CardHeader title="Status zatrudnienia" />
+          <CardHeader title={t('reports.statusBreakdown')} />
           <div className="flex items-center gap-5">
             <Donut
               segments={[
-                { value: statusStats.active, color: '#10b981', label: 'Aktywni' },
-                { value: statusStats.on_leave, color: '#f59e0b', label: 'Urlop' },
-                { value: statusStats.terminated, color: '#ef4444', label: 'Zatrzymani' },
+                { value: statusStats.active, color: '#10b981', label: t('reports.statusActive') },
+                { value: statusStats.on_leave, color: '#f59e0b', label: t('reports.statusOnLeave') },
+                { value: statusStats.terminated, color: '#ef4444', label: t('reports.statusTerminated') },
               ]}
             />
             <div className="space-y-2 text-sm">
-              <LegendRow color="#10b981" label="Aktywni" value={statusStats.active} total={employees.length} />
-              <LegendRow color="#f59e0b" label="Na urlopie" value={statusStats.on_leave} total={employees.length} />
-              <LegendRow color="#ef4444" label="Zatrzymani" value={statusStats.terminated} total={employees.length} />
+              <LegendRow color="#10b981" label={t('reports.statusActive')} value={statusStats.active} total={employees.length} />
+              <LegendRow color="#f59e0b" label={t('reports.statusOnLeave')} value={statusStats.on_leave} total={employees.length} />
+              <LegendRow color="#ef4444" label={t('reports.statusTerminated')} value={statusStats.terminated} total={employees.length} />
             </div>
           </div>
         </Card>
 
         {/* Level breakdown */}
         <Card>
-          <CardHeader title="Struktura stanowisk" subtitle="Rozkład poziomów" />
+          <CardHeader title={t('reports.positionStructure')} subtitle={t('reports.positionStructureSub')} />
           <div className="space-y-2">
             {levelStats.map(([level, count]) => (
               <div key={level} className="flex items-center justify-between text-sm">
@@ -194,11 +196,11 @@ export function ReportsPage({ data, onSelectEmployee }: ReportsPageProps) {
 
         {/* Tenure */}
         <Card>
-          <CardHeader title="Staż pracy" subtitle="Rozkład stażu" />
+          <CardHeader title={t('reports.tenure')} subtitle={t('reports.tenureSub')} />
           <div className="space-y-2">
             {Object.entries(tenureBuckets).map(([bucket, count]) => (
               <div key={bucket} className="flex items-center justify-between text-sm">
-                <span className="text-ink-700 flex items-center gap-1.5"><Clock size={12} className="text-ink-400" /> {bucket}</span>
+                <span className="text-ink-700 flex items-center gap-1.5"><Clock size={12} className="text-ink-400" /> {t('reports.tenure.' + bucket)}</span>
                 <div className="flex items-center gap-2">
                   <div className="w-20 h-2 bg-ink-100 rounded-full overflow-hidden">
                     <div className="h-full bg-emerald-500 rounded-full" style={{ width: `${(count / employees.length) * 100}%` }} />
@@ -214,7 +216,7 @@ export function ReportsPage({ data, onSelectEmployee }: ReportsPageProps) {
       <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
         {/* Top competencies */}
         <Card>
-          <CardHeader title="Najczęstsze kompetencje" subtitle="Top 8 w firmie" />
+          <CardHeader title={t('reports.topCompetencies')} subtitle={t('reports.topCompetenciesSub')} />
           <div className="space-y-2">
             {competencyStats.map(([comp, count]) => (
               <div key={comp} className="flex items-center justify-between text-sm">
@@ -232,9 +234,9 @@ export function ReportsPage({ data, onSelectEmployee }: ReportsPageProps) {
 
         {/* Vacancies */}
         <Card>
-          <CardHeader title="Otwarte wakaty" subtitle={`${vacantPositions.length} stanowisk nieobsadzonych`} />
+          <CardHeader title={t('reports.openVacancies')} subtitle={t('reports.openVacanciesSub', { count: vacantPositions.length })} />
           {vacantPositions.length === 0 ? (
-            <p className="text-sm text-ink-400">Brak otwartych wakatów.</p>
+            <p className="text-sm text-ink-400">{t('reports.noVacancies')}</p>
           ) : (
             <div className="space-y-2">
               {vacantPositions.map((p) => {
@@ -256,7 +258,7 @@ export function ReportsPage({ data, onSelectEmployee }: ReportsPageProps) {
 
       {/* Employee directory link */}
       <Card>
-        <CardHeader title="Katalog pracowników" subtitle="Pełna lista zatrudnionych" />
+        <CardHeader title={t('reports.directory')} subtitle={t('reports.directorySub')} />
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
           {employees.slice(0, 12).map((e) => (
             <button
@@ -284,6 +286,7 @@ function Donut({ segments }: { segments: { value: number; color: string; label: 
   const radius = 42;
   const circumference = 2 * Math.PI * radius;
   let offset = 0;
+  const { t } = useLang();
   return (
     <svg width="120" height="120" viewBox="0 0 120 120" className="shrink-0">
       <circle cx="60" cy="60" r={radius} fill="none" stroke="#f1f5f9" strokeWidth="14" />
@@ -304,7 +307,7 @@ function Donut({ segments }: { segments: { value: number; color: string; label: 
         return circle;
       })}
       <text x="60" y="56" textAnchor="middle" className="fill-ink-900 text-lg font-bold">{total}</text>
-      <text x="60" y="74" textAnchor="middle" className="fill-ink-400 text-[10px]">pracowników</text>
+      <text x="60" y="74" textAnchor="middle" className="fill-ink-400 text-[10px]">{t('reports.donutLabel')}</text>
     </svg>
   );
 }

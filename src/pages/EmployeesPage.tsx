@@ -15,6 +15,7 @@ import type { OrgSnapshot, EmployeeInput } from '../lib/api';
 import { createEmployee, updateEmployee, deleteEmployee } from '../lib/api';
 import type { EmployeeWithRelations } from '../lib/types';
 import { can } from '../hooks/useAuth';
+import { useLang } from '../hooks/useLang';
 import { cn } from '../lib/utils';
 
 interface EmployeesPageProps {
@@ -28,6 +29,7 @@ type ViewMode = 'grid' | 'list';
 
 export function EmployeesPage({ data, onSelectEmployee, role, onRefresh }: EmployeesPageProps) {
   const { employees, departments, locations } = data;
+  const { t } = useLang();
   const [query, setQuery] = useState('');
   const [deptFilter, setDeptFilter] = useState('all');
   const [locationFilter, setLocationFilter] = useState('all');
@@ -64,7 +66,7 @@ export function EmployeesPage({ data, onSelectEmployee, role, onRefresh }: Emplo
       setDeleting(null);
       onRefresh();
     } catch (e) {
-      alert(e instanceof Error ? e.message : 'Nie udało się usunąć');
+      alert(e instanceof Error ? e.message : t('error.deleteFailed'));
     } finally { setDeleteLoading(false); }
   };
 
@@ -119,7 +121,7 @@ export function EmployeesPage({ data, onSelectEmployee, role, onRefresh }: Emplo
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-400" />
               <input
                 className="input pl-9"
-                placeholder="Szukaj pracownika, stanowiska, kompetencji…"
+                placeholder={t('empPage.searchPh')}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
               />
@@ -132,7 +134,7 @@ export function EmployeesPage({ data, onSelectEmployee, role, onRefresh }: Emplo
             <div className="flex gap-2">
               {canWrite && (
                 <Button variant="primary" size="md" onClick={openCreate}>
-                  <Plus size={16} /> Dodaj pracownika
+                  <Plus size={16} /> {t('empPage.addEmployee')}
                 </Button>
               )}
               <div className="flex gap-1 rounded-lg bg-ink-100 p-1">
@@ -158,7 +160,7 @@ export function EmployeesPage({ data, onSelectEmployee, role, onRefresh }: Emplo
               <Search size={16} className="absolute left-3 top-1/2 -translate-y-1/2 text-ink-400" />
               <input
                 className="input pl-9"
-                placeholder="Szukaj pracownika, stanowiska, kompetencji…"
+                placeholder={t('empPage.searchPh')}
                 value={query}
                 onChange={(e) => setQuery(e.target.value)}
               />
@@ -189,26 +191,26 @@ export function EmployeesPage({ data, onSelectEmployee, role, onRefresh }: Emplo
           </div>
 
           <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-3">
-            <Select label="Dział" value={deptFilter} onChange={(e) => setDeptFilter(e.target.value)}>
-              <option value="all">Wszystkie działy</option>
+            <Select label={t('empPage.filterDept')} value={deptFilter} onChange={(e) => setDeptFilter(e.target.value)}>
+              <option value="all">{t('empPage.filterDeptAll')}</option>
               {departments.map((d) => (
                 <option key={d.id} value={d.id}>{d.name}</option>
               ))}
             </Select>
-            <Select label="Lokalizacja" value={locationFilter} onChange={(e) => setLocationFilter(e.target.value)}>
-              <option value="all">Wszystkie lokalizacje</option>
+            <Select label={t('empPage.filterLocation')} value={locationFilter} onChange={(e) => setLocationFilter(e.target.value)}>
+              <option value="all">{t('empPage.filterLocationAll')}</option>
               {locations.map((l) => (
                 <option key={l.id} value={l.id}>{l.name}</option>
               ))}
             </Select>
-            <Select label="Poziom stanowiska" value={levelFilter} onChange={(e) => setLevelFilter(e.target.value)}>
-              <option value="all">Wszystkie poziomy</option>
+            <Select label={t('empPage.filterLevel')} value={levelFilter} onChange={(e) => setLevelFilter(e.target.value)}>
+              <option value="all">{t('empPage.filterLevelAll')}</option>
               {allLevels.map((l) => (
                 <option key={l} value={l}>{l}</option>
               ))}
             </Select>
-            <Select label="Kompetencja" value={competencyFilter} onChange={(e) => setCompetencyFilter(e.target.value)}>
-              <option value="all">Wszystkie kompetencje</option>
+            <Select label={t('empPage.filterCompetency')} value={competencyFilter} onChange={(e) => setCompetencyFilter(e.target.value)}>
+              <option value="all">{t('empPage.filterCompetencyAll')}</option>
               {allCompetencies.map((c) => (
                 <option key={c} value={c}>{c}</option>
               ))}
@@ -218,12 +220,12 @@ export function EmployeesPage({ data, onSelectEmployee, role, onRefresh }: Emplo
           <div className="flex items-center justify-between text-xs text-ink-500">
             <span className="flex items-center gap-1.5">
               <Filter size={12} />
-              Znaleziono <strong className="text-ink-800">{filtered.length}</strong> z {employees.length} pracowników
-              {activeFilters > 0 && <span className="text-brand-600">· {activeFilters} filtr(ów) aktywnych</span>}
+              {t('empPage.results', { found: filtered.length, total: employees.length })}
+              {activeFilters > 0 && <span className="text-brand-600">· {t('empPage.filtersActive', { count: activeFilters })}</span>}
             </span>
             {activeFilters > 0 && (
               <Button variant="ghost" size="sm" onClick={clearFilters}>
-                <X size={12} /> Wyczyść filtry
+                <X size={12} /> {t('empPage.clearFilters')}
               </Button>
             )}
           </div>
@@ -234,8 +236,8 @@ export function EmployeesPage({ data, onSelectEmployee, role, onRefresh }: Emplo
       {filtered.length === 0 ? (
         <Card>
           <EmptyState
-            title="Brak wyników"
-            description="Nie znaleziono pracowników spełniających kryteria. Zmień filtry lub wyszukiwanie."
+            title={t('empPage.empty.title')}
+            description={t('empPage.empty.desc')}
             icon={<Users size={22} />}
           />
         </Card>
@@ -246,10 +248,10 @@ export function EmployeesPage({ data, onSelectEmployee, role, onRefresh }: Emplo
               <EmployeeCard employee={e} onClick={onSelectEmployee} />
               {canWrite && canDelete && (
                 <div className="absolute top-2 right-2 flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                  <button onClick={(ev) => { ev.stopPropagation(); openEdit(e); }} className="rounded-md bg-white/90 hover:bg-white p-1.5 text-ink-600 hover:text-brand-600 shadow-sm border border-ink-100" title="Edytuj">
+                  <button onClick={(ev) => { ev.stopPropagation(); openEdit(e); }} className="rounded-md bg-white/90 hover:bg-white p-1.5 text-ink-600 hover:text-brand-600 shadow-sm border border-ink-100" title={t('common.edit')}>
                     <Pencil size={13} />
                   </button>
-                  <button onClick={(ev) => { ev.stopPropagation(); setDeleting(e); }} className="rounded-md bg-white/90 hover:bg-white p-1.5 text-ink-600 hover:text-red-600 shadow-sm border border-ink-100" title="Usuń">
+                  <button onClick={(ev) => { ev.stopPropagation(); setDeleting(e); }} className="rounded-md bg-white/90 hover:bg-white p-1.5 text-ink-600 hover:text-red-600 shadow-sm border border-ink-100" title={t('common.delete')}>
                     <Trash2 size={13} />
                   </button>
                 </div>
@@ -262,11 +264,11 @@ export function EmployeesPage({ data, onSelectEmployee, role, onRefresh }: Emplo
           <table className="w-full text-sm">
             <thead className="bg-ink-50 text-xs text-ink-500 uppercase tracking-wide">
               <tr>
-                <th className="text-left font-medium px-4 py-3">Pracownik</th>
-                <th className="text-left font-medium px-4 py-3 hidden md:table-cell">Stanowisko</th>
-                <th className="text-left font-medium px-4 py-3 hidden lg:table-cell">Dział</th>
-                <th className="text-left font-medium px-4 py-3 hidden xl:table-cell">Lokalizacja</th>
-                <th className="text-left font-medium px-4 py-3">Status</th>
+                <th className="text-left font-medium px-4 py-3">{t('empPage.colEmployee')}</th>
+                <th className="text-left font-medium px-4 py-3 hidden md:table-cell">{t('empPage.colPosition')}</th>
+                <th className="text-left font-medium px-4 py-3 hidden lg:table-cell">{t('empPage.colDepartment')}</th>
+                <th className="text-left font-medium px-4 py-3 hidden xl:table-cell">{t('empPage.colLocation')}</th>
+                <th className="text-left font-medium px-4 py-3">{t('empPage.colStatus')}</th>
               </tr>
             </thead>
             <tbody className="divide-y divide-ink-100">
@@ -282,7 +284,7 @@ export function EmployeesPage({ data, onSelectEmployee, role, onRefresh }: Emplo
                       <div className="min-w-0">
                         <p className="font-medium text-ink-900 truncate flex items-center gap-1.5">
                           {fullName(e)}
-                          {e.is_board_member && <Badge variant="brand" size="sm">Zarząd</Badge>}
+                          {e.is_board_member && <Badge variant="brand" size="sm">{t('badge.board')}</Badge>}
                         </p>
                         <p className="text-xs text-ink-400 truncate md:hidden">{e.position?.title}</p>
                       </div>
@@ -296,10 +298,10 @@ export function EmployeesPage({ data, onSelectEmployee, role, onRefresh }: Emplo
                       <EmployeeStatusBadge status={e.status} />
                       {canWrite && canDelete && (
                         <div className="flex gap-1 opacity-0 group-hover:opacity-100 transition-opacity">
-                          <button onClick={(ev) => { ev.stopPropagation(); openEdit(e); }} className="rounded p-1 text-ink-400 hover:text-brand-600" title="Edytuj">
+                          <button onClick={(ev) => { ev.stopPropagation(); openEdit(e); }} className="rounded p-1 text-ink-400 hover:text-brand-600" title={t('common.edit')}>
                             <Pencil size={13} />
                           </button>
-                          <button onClick={(ev) => { ev.stopPropagation(); setDeleting(e); }} className="rounded p-1 text-ink-400 hover:text-red-600" title="Usuń">
+                          <button onClick={(ev) => { ev.stopPropagation(); setDeleting(e); }} className="rounded p-1 text-ink-400 hover:text-red-600" title={t('common.delete')}>
                             <Trash2 size={13} />
                           </button>
                         </div>
@@ -324,9 +326,9 @@ export function EmployeesPage({ data, onSelectEmployee, role, onRefresh }: Emplo
       />
       <ConfirmDialog
         open={!!deleting}
-        title="Usunąć pracownika?"
-        message={`Czy na pewno chcesz usunąć ${deleting ? fullName(deleting) : ''}? Tej operacji nie można cofnąć.`}
-        confirmLabel="Usuń"
+        title={t('confirm.deleteEmployee.title')}
+        message={t('confirm.deleteEmployee.msg', { name: deleting ? fullName(deleting) : '' })}
+        confirmLabel={t('common.delete')}
         destructive
         loading={deleteLoading}
         onConfirm={handleDelete}
